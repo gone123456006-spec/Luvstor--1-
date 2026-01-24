@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const setupSocket = require('./socket');
 const connectDB = require('./config/db');
+const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,14 @@ setupSocket(server);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
+
+// API Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+
+// Error Handling Middleware (must be after routes)
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
