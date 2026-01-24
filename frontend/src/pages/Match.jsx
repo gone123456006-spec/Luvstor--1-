@@ -1,29 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
+import { X } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
 import logo from '../assets/logo.png';
 import searchingAnimation from '../assets/searching.json';
 
 const Match = () => {
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(0);
+  const { socket, connectSocket, disconnectSocket } = useSocket();
+  const [status, setStatus] = useState('Connecting...');
 
   useEffect(() => {
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => (prev < 100 ? prev + 5 : 100));
-    }, 150);
+    const newSocket = connectSocket();
 
-    const matchTimer = setTimeout(() => {
-      navigate('/chat');
-    }, 4000);
+    if (!newSocket) {
+      setStatus('Connection failed. Please try again.');
+      return;
+    }
+
+    setStatus('Looking for a match...');
+
+    // Join queue logic
+    newSocket.emit('joinQueue', { preference: 'both' });
+
+    const handleMatchFound = (data) => {
+      console.log('Match found:', data);
+      navigate('/chat', { state: data });
+    };
+
+    const handleWaiting = () => {
+      setStatus('Waiting for available partner...');
+    };
+
+    const handleError = (err) => {
+      console.error(err);
+      setStatus('Error connecting. Please try again.');
+    };
+
+    newSocket.on('matchFound', handleMatchFound);
+    newSocket.on('waitingForMatch', handleWaiting);
+    newSocket.on('error', handleError);
 
     return () => {
-      clearInterval(progressInterval);
-      clearTimeout(matchTimer);
+      newSocket.off('matchFound', handleMatchFound);
+      newSocket.off('waitingForMatch', handleWaiting);
+      newSocket.off('error', handleError);
     };
-  }, [navigate]);
+  }, [navigate, connectSocket]);
 
   const handleCancel = () => {
+    disconnectSocket();
     navigate('/');
   };
 
@@ -39,16 +66,24 @@ const Match = () => {
 
       <h2>Finding the best match for you</h2>
       <p className="match-subtext">
-        Connecting you with someone who’s online right now...
+        {status}
       </p>
 
       <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${progress}%` }} />
+        <div className="progress-fill" style={{ width: '100%', animation: 'progressIndeterminate 2s infinite linear' }} />
       </div>
 
       <button className="cancel-btn" onClick={handleCancel}>
+        <X size={18} />
         Cancel Search
       </button>
+
+      <style>{`
+        @keyframes progressIndeterminate {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </div>
   );
 };

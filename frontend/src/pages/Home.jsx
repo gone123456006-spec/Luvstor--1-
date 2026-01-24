@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserCircle2, Zap, Shield } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const Home = () => {
@@ -29,9 +30,18 @@ const Home = () => {
         </button>
 
         <div className="features">
-          <div>Anonymous</div>
-          <div>Instant Match</div>
-          <div>Secure Chat</div>
+          <div>
+            <UserCircle2 size={24} className="feature-icon" />
+            <span>Anonymous</span>
+          </div>
+          <div>
+            <Zap size={24} className="feature-icon" />
+            <span>Instant Match</span>
+          </div>
+          <div>
+            <Shield size={24} className="feature-icon" />
+            <span>Secure Chat</span>
+          </div>
         </div>
       </div>
     </div>

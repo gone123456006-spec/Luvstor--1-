@@ -1,66 +1,169 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
+import { Mars, Venus, User, Globe } from 'lucide-react';
 import logo from '../assets/logo.png';
 import selectAnimation from '../assets/select-gender.json';
 
 const Gender = () => {
-  const [selectedGender, setSelectedGender] = useState(null);
+  const [formData, setFormData] = useState({
+    username: '',
+    country: '',
+    gender: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const navigate = useNavigate();
 
-  const handleGenderSelect = (gender) => {
-    setSelectedGender(gender);
-    localStorage.setItem('userGender', gender);
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-    setTimeout(() => {
-      navigate('/match');
-    }, 400);
+  const handleGenderSelect = (gender) => {
+    setFormData(prev => ({ ...prev, gender }));
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.username || !formData.country || !formData.gender) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/anonymous', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/match');
+      } else {
+        setError(data.message || 'Login failed');
+      }
+    } catch (err) {
+      setError('Connection error. Is backend running?');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="gender-container">
       <img src={logo} alt="Luvstor" className="gender-logo" />
 
-      <Lottie
-        animationData={selectAnimation}
-        loop
-        className="gender-animation"
-      />
+      {/* Inputs Section */}
+      <div className="input-group">
+        <div className="input-wrapper">
+          <User className="input-icon" size={20} />
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={formData.username}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div className="input-wrapper">
+          <Globe className="input-icon" size={20} />
+          <input
+            type="text"
+            name="country"
+            placeholder="Country"
+            value={formData.country}
+            onChange={handleInputChange}
+          />
+        </div>
+      </div>
 
       <h2>Choose Your Gender</h2>
-      <p className="gender-subtext">
-        This helps us match you better. Your identity stays private.
-      </p>
 
       <div className="gender-options">
         <button
-          className={`gender-card ${selectedGender === 'male' ? 'active' : ''
-            }`}
+          className={`gender-card ${formData.gender === 'male' ? 'active' : ''}`}
           onClick={() => handleGenderSelect('male')}
-          aria-pressed={selectedGender === 'male'}
+          type="button"
         >
-          <svg className="gender-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="10" cy="14" r="5" stroke="currentColor" strokeWidth="2" />
-            <path d="M14 5L19 5L19 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M14 10L19 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Mars className="gender-icon" strokeWidth={1.5} />
           <span className="label">Male</span>
         </button>
 
         <button
-          className={`gender-card ${selectedGender === 'female' ? 'active' : ''
-            }`}
+          className={`gender-card ${formData.gender === 'female' ? 'active' : ''}`}
           onClick={() => handleGenderSelect('female')}
-          aria-pressed={selectedGender === 'female'}
+          type="button"
         >
-          <svg className="gender-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="9" r="5" stroke="currentColor" strokeWidth="2" />
-            <path d="M12 14L12 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M9 17L15 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Venus className="gender-icon" strokeWidth={1.5} />
           <span className="label">Female</span>
         </button>
       </div>
+
+      {error && <p className="error-msg">{error}</p>}
+
+      <button
+        className="start-btn continue-btn"
+        onClick={handleSubmit}
+        disabled={loading}
+      >
+        {loading ? 'Connecting...' : 'Continue'}
+      </button>
+
+      <style>{`
+        .input-group {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          margin-bottom: 30px;
+          width: 100%;
+          max-width: 320px;
+        }
+        .input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .input-icon {
+          position: absolute;
+          left: 15px;
+          color: rgba(255,255,255,0.6);
+        }
+        .input-wrapper input {
+          width: 100%;
+          padding: 12px 12px 12px 45px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.1);
+          color: white;
+          font-size: 1rem;
+          outline: none;
+        }
+        .input-wrapper input:focus {
+          border-color: #ffd369;
+          background: rgba(255,255,255,0.15);
+        }
+        .error-msg {
+          color: #ff6b6b;
+          margin: 10px 0;
+          font-size: 0.9rem;
+        }
+        .continue-btn {
+          margin-top: 30px;
+          width: 100%;
+          max-width: 200px;
+          opacity: ${loading || !formData.gender || !formData.username ? 0.5 : 1};
+          pointer-events: ${loading ? 'none' : 'auto'};
+        }
+      `}</style>
     </div>
   );
 };
