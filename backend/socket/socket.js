@@ -137,83 +137,73 @@ module.exports = (io) => {
       }
     });
 
-    // Send message
-    socket.on("sendMessage", async ({ roomId, message }) => {
+    // Send message (New WhatsApp-style handler)
+    socket.on("send-message", async (data) => {
       try {
         const user = await User.findById(socket.userId);
+        if (user && user.roomId) {
+          // Save message to database (Optional, but good for persistence)
+          const partnerIdStr = user.roomId.split('-').find(id => id !== user._id.toString());
+          if (partnerIdStr) {
+            await Message.create({
+              sender: user._id,
+              receiver: partnerIdStr,
+              roomId: user.roomId,
+              content: data.message
+            });
+          }
 
-        if (!user || user.roomId !== roomId) {
-          return socket.emit("error", { message: "Not in this room" });
+          socket.to(user.roomId).emit("receive-message", data);
         }
-
-        // Find the partner in the room
-        const partnerIdStr = roomId.split('-').find(id => id !== user._id.toString());
-        const partner = await User.findById(partnerIdStr);
-
-        if (!partner) {
-          return socket.emit("error", { message: "Partner not found" });
-        }
-
-        // Save message to database
-        const newMessage = await Message.create({
-          sender: user._id,
-          receiver: partner._id,
-          roomId,
-          content: message
-        });
-
-        // Emit message to room
-        const messageData = {
-          id: newMessage._id,
-          content: message,
-          sender: user._id.toString(),
-          senderUsername: user.username,
-          timestamp: newMessage.createdAt
-        };
-
-        io.to(roomId).emit("receiveMessage", messageData);
-        console.log(`Message in ${roomId}: ${user.username}: ${message}`);
       } catch (error) {
-        console.error('Error in sendMessage:', error);
-        socket.emit("error", { message: "Failed to send message" });
+        console.error('Error in send-message:', error);
       }
     });
 
-    // Typing indicators
-    socket.on("typing-start", async ({ roomId }) => {
+    socket.on("message-seen", async () => {
       try {
         const user = await User.findById(socket.userId);
-        if (user && user.roomId === roomId) {
-          socket.to(roomId).emit("user-typing");
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("message-seen");
+        }
+      } catch (error) {
+        console.error('Error in message-seen:', error);
+      }
+    });
+
+    // Typing indicator handlers
+    socket.on("typing-start", async () => {
+      try {
+        const user = await User.findById(socket.userId);
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("user-typing");
         }
       } catch (error) {
         console.error('Error in typing-start:', error);
       }
     });
 
-    socket.on("typing-stop", async ({ roomId }) => {
+    socket.on("typing-stop", async () => {
       try {
         const user = await User.findById(socket.userId);
-        if (user && user.roomId === roomId) {
-          socket.to(roomId).emit("user-stopped-typing");
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("user-stopped-typing");
         }
       } catch (error) {
         console.error('Error in typing-stop:', error);
       }
     });
 
-    // Leave chat
-    socket.on("leaveChat", async () => {
+    socket.on("disconnect-room", async () => {
       try {
         const user = await User.findById(socket.userId);
-
         if (user && user.roomId) {
           const roomId = user.roomId;
 
           // Notify partner
           socket.to(roomId).emit("partnerDisconnected");
 
-          // Find partner and reset their status
+          // Reset partner status
           const partnerIdStr = roomId.split('-').find(id => id !== user._id.toString());
           if (partnerIdStr) {
             await User.findByIdAndUpdate(partnerIdStr, {
@@ -222,16 +212,14 @@ module.exports = (io) => {
             });
           }
 
-          // Reset user status
+          socket.leave(roomId);
           user.status = 'online';
           user.roomId = null;
           await user.save();
-
-          socket.leave(roomId);
           console.log(`${user.username} left chat room ${roomId}`);
         }
       } catch (error) {
-        console.error('Error in leaveChat:', error);
+        console.error('Error in disconnect-room:', error);
       }
     });
 

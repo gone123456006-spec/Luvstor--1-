@@ -1,9 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --primary-gradient: linear-gradient(180deg, #360167 0%, #561496 50%, #AF1281 100%);
+  --radial-gradient: radial-gradient(circle, #561496 0%, #360167 70%, #210141 100%);
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --chat-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --accent-yellow: #ffd369;
+  --accent-yellow-hover: #ffbf00;
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -35,125 +38,268 @@ body {
   overflow-x: hidden;
 }
 
+/* ===================== LOGO STYLES ===================== */
+.logo {
+  width: clamp(220px, 60vw, 400px);
+  height: auto;
+  margin: 0 auto 2rem;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+  animation: fadeInLogo 0.8s ease-out;
+  background: transparent !important;
+  mix-blend-mode: normal;
+}
+
+.chat-logo {
+  height: 28px;
+  width: auto;
+  margin-right: 8px;
+  vertical-align: middle;
+  filter: brightness(0) invert(1);
+  background: transparent !important;
+}
+
+@keyframes fadeInLogo {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ===================== HOME PAGE ===================== */
 .home-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  text-align: center;
-  color: white;
+  background: var(--radial-gradient);
+  background-image:
+    var(--radial-gradient),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='20' y='40' fill='rgba(255, 255, 255, 0.02)' font-family='Arial' font-size='14' font-weight='bold'%3ELuvstor%3C/text%3E%3Cpath d='M100 80 Q100 70 90 70 T80 80 T100 110 T120 80 T110 70 T100 80' fill='rgba(255, 255, 255, 0.03)' /%3E%3Cpath d='M150 150 L160 150 L155 140 Z' fill='rgba(255, 255, 255, 0.02)' /%3E%3Ccircle cx='40' cy='160' r='4' fill='rgba(255, 255, 255, 0.02)' /%3E%3Cpath d='M170 30 L180 30 M175 25 L175 35' stroke='rgba(255, 255, 255, 0.03)' stroke-width='2' /%3E%3Ctext x='120' y='180' fill='rgba(255, 255, 255, 0.01)' font-family='Arial' font-size='10'%3ELuvstorChat%3C/text%3E%3C/svg%3E");
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
+  color: #fff;
 }
 
-.home-container h1 {
-  font-size: clamp(2rem, 8vw, 3.5rem);
-  margin-bottom: 1rem;
+.home-content {
+  max-width: 1100px;
+  width: 100%;
+  text-align: center;
+}
+
+.home-content h1 {
+  font-size: clamp(2.4rem, 8vw, 3.5rem);
+  font-weight: 700;
   line-height: 1.2;
+  margin-bottom: 1rem;
 }
 
-.home-container p {
-  font-size: clamp(1rem, 4vw, 1.5rem);
-  margin-bottom: 2rem;
-  max-width: 90%;
+.home-content h1 span {
+  color: #ffd369;
+  display: block;
+  margin-top: 0.5rem;
+}
+
+.home-content p {
+  font-size: clamp(1rem, 4vw, 1.2rem);
+  margin: 20px auto 30px;
+  max-width: 600px;
   line-height: 1.6;
+  opacity: 0.9;
 }
 
-.home-container button {
-  padding: clamp(10px, 2vw, 15px) clamp(25px, 5vw, 35px);
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
-  background-color: #fff;
-  color: #667eea;
+.start-btn {
+  padding: 14px 36px;
   border: none;
-  border-radius: 8px;
+  border-radius: 30px;
+  font-size: clamp(1rem, 3vw, 1.1rem);
+  background: #ffd369;
+  color: #000;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(255, 211, 105, 0.3);
 }
 
-.home-container button:hover {
+.start-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: #ffbf00;
+  box-shadow: 0 6px 20px rgba(255, 211, 105, 0.4);
 }
 
-.home-container button:active {
+.start-btn:active {
   transform: scale(0.98);
+}
+
+.features {
+  display: flex;
+  justify-content: center;
+  gap: clamp(20px, 5vw, 40px);
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+.features div {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* ===================== GENDER PAGE ===================== */
 .gender-container {
+  min-height: 100vh;
+  background: var(--radial-gradient);
+  background-image:
+    var(--radial-gradient),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='20' y='40' fill='rgba(255, 255, 255, 0.02)' font-family='Arial' font-size='14' font-weight='bold'%3ELuvstor%3C/text%3E%3Cpath d='M100 80 Q100 70 90 70 T80 80 T100 110 T120 80 T110 70 T100 80' fill='rgba(255, 255, 255, 0.03)' /%3E%3Cpath d='M150 150 L160 150 L155 140 Z' fill='rgba(255, 255, 255, 0.02)' /%3E%3Ccircle cx='40' cy='160' r='4' fill='rgba(255, 255, 255, 0.02)' /%3E%3Cpath d='M170 30 L180 30 M175 25 L175 35' stroke='rgba(255, 255, 255, 0.03)' stroke-width='2' /%3E%3Ctext x='120' y='180' fill='rgba(255, 255, 255, 0.01)' font-family='Arial' font-size='10'%3ELuvstorChat%3C/text%3E%3C/svg%3E");
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  color: white;
+  justify-content: center;
+  color: #fff;
   padding: 20px;
+  text-align: center;
+}
+
+.gender-logo {
+  width: 90px;
+  margin-bottom: 10px;
+}
+
+.gender-animation {
+  width: 220px;
+  margin: 10px 0 20px;
 }
 
 .gender-container h2 {
-  font-size: clamp(1.5rem, 6vw, 2.5rem);
-  margin-bottom: clamp(2rem, 5vw, 3rem);
-  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+
+.gender-subtext {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  margin-bottom: 30px;
 }
 
 .gender-options {
   display: flex;
-  gap: clamp(1rem, 5vw, 2rem);
-  flex-wrap: wrap;
+  gap: 20px;
+  flex-direction: row;
   justify-content: center;
-  width: 100%;
-  max-width: 600px;
 }
 
-.gender-options button {
-  padding: clamp(15px, 3vw, 25px) clamp(30px, 6vw, 50px);
-  font-size: clamp(1rem, 3vw, 1.3rem);
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid white;
-  border-radius: 12px;
+.gender-card {
+  width: 120px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  color: #fff;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
-  font-weight: 600;
-  flex: 1;
-  min-width: 120px;
-  max-width: 200px;
+  padding: 15px;
 }
 
-.gender-options button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-5px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+.gender-card:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.gender-options button:active {
-  transform: translateY(-2px);
+.gender-card.active {
+  border-color: #ffd369;
+  background: rgba(255, 211, 105, 0.15);
 }
 
-.gender-options button.selected {
-  background-color: white;
-  color: #667eea;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+.gender-icon {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 12px;
+  stroke: currentColor;
+}
+
+.gender-card .label {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 /* ===================== MATCH PAGE ===================== */
 .match-container {
+  min-height: 100vh;
+  background: var(--radial-gradient);
+  background-image:
+    var(--radial-gradient),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='20' y='40' fill='rgba(255, 255, 255, 0.02)' font-family='Arial' font-size='14' font-weight='bold'%3ELuvstor%3C/text%3E%3Cpath d='M100 80 Q100 70 90 70 T80 80 T100 110 T120 80 T110 70 T100 80' fill='rgba(255, 255, 255, 0.03)' /%3E%3Cpath d='M150 150 L160 150 L155 140 Z' fill='rgba(255, 255, 255, 0.02)' /%3E%3Ccircle cx='40' cy='160' r='4' fill='rgba(255, 255, 255, 0.02)' /%3E%3Cpath d='M170 30 L180 30 M175 25 L175 35' stroke='rgba(255, 255, 255, 0.03)' stroke-width='2' /%3E%3Ctext x='120' y='180' fill='rgba(255, 255, 255, 0.01)' font-family='Arial' font-size='10'%3ELuvstorChat%3C/text%3E%3C/svg%3E");
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  color: white;
+  justify-content: center;
+  color: #fff;
   padding: 20px;
   text-align: center;
 }
 
+.match-logo {
+  width: 90px;
+  margin-bottom: 20px;
+}
+
+.match-animation {
+  width: 260px;
+  margin-bottom: 20px;
+}
+
 .match-container h2 {
-  font-size: clamp(1.5rem, 6vw, 2.5rem);
-  margin-bottom: clamp(2rem, 5vw, 3rem);
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.match-subtext {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  margin-bottom: 25px;
+}
+
+.progress-bar {
+  width: 260px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd369, #ff9f00);
+  transition: width 0.15s ease;
+}
+
+.cancel-btn {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+  padding: 10px 28px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background: #ff6b6b;
+  color: #000;
 }
 
 .loading-spinner {
@@ -245,7 +391,7 @@ body {
 
 .chat-header {
   padding: clamp(16px, 3vw, 20px);
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   color: white;
   text-align: center;
   border-bottom: none;
@@ -319,7 +465,7 @@ body {
 
 .message.own {
   align-self: flex-end;
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, #302b63, #24243e);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -395,7 +541,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #667eea;
+  background: #c33764;
   animation: typingBounce 1.4s infinite ease-in-out;
 }
 
@@ -460,8 +606,8 @@ body {
 
 .input-area button {
   padding: clamp(12px, 2vw, 14px) clamp(20px, 3vw, 28px);
-  background: var(--primary-gradient);
-  color: white;
+  background: #ffd369;
+  color: #000;
   border: none;
   border-radius: 24px;
   cursor: pointer;
@@ -469,7 +615,7 @@ body {
   font-weight: 600;
   font-size: clamp(0.9rem, 2.5vw, 1rem);
   white-space: nowrap;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(255, 211, 105, 0.3);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -478,7 +624,8 @@ body {
 
 .input-area button:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  background: #ffbf00;
+  box-shadow: 0 4px 12px rgba(255, 211, 105, 0.4);
 }
 
 .input-area button:active {
@@ -494,34 +641,135 @@ body {
 
 /* Extra Small Devices (Mobile) */
 @media (max-width: 480px) {
-  .gender-options {
-    flex-direction: column;
-    width: 100%;
+  .home-content h1 {
+    font-size: 2rem;
   }
 
-  .gender-options button {
-    width: 100%;
-    max-width: none;
+  .logo {
+    width: clamp(180px, 70vw, 280px);
+    margin-bottom: 1.5rem;
+  }
+
+  .gender-logo {
+    width: 70px;
+  }
+
+  .gender-animation {
+    width: 180px;
+  }
+
+  .gender-container h2 {
+    font-size: 1.5rem;
+  }
+
+  .gender-subtext {
+    font-size: 0.9rem;
+  }
+
+  .gender-options {
+    gap: 15px;
+  }
+
+  .gender-card {
+    width: 110px;
+    height: 130px;
+    padding: 12px;
+  }
+
+  .gender-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+  }
+
+  .gender-card .label {
+    font-size: 0.95rem;
+  }
+
+  .features {
+    gap: 15px;
+  }
+
+  .features div {
+    font-size: 0.85rem;
+    padding: 8px 16px;
+  }
+
+  .gender-options {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .gender-card {
+    width: 100px;
+    height: 120px;
+  }
+
+  .gender-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .gender-card .label {
+    font-size: 0.9rem;
   }
 
   .chat-container {
     border-radius: 0;
     margin: 0;
+    height: 100vh;
+  }
+
+  .chat-header {
+    padding: 14px;
+    font-size: 1rem;
+  }
+
+  .messages {
+    padding: 12px;
+  }
+
+  .message {
+    max-width: 85%;
+    padding: 10px 14px;
   }
 
   .message.own {
     max-width: 85%;
   }
+
+  .input-area {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .input-area input {
+    font-size: 0.95rem;
+  }
+
+  .input-area button {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
 }
 
 /* Small Devices (Tablets) */
 @media (min-width: 481px) and (max-width: 768px) {
+  .home-content {
+    max-width: 90%;
+  }
+
   .gender-options {
     flex-direction: row;
   }
 
   .message.own {
     max-width: 75%;
+  }
+
+  .chat-container {
+    margin: 10px;
+    border-radius: 16px;
   }
 }
 
@@ -534,6 +782,11 @@ body {
   .message.own {
     max-width: 60%;
   }
+
+  .chat-container {
+    max-width: 900px;
+    margin: 20px auto;
+  }
 }
 
 /* Large Devices (Large Desktop) */
@@ -545,6 +798,10 @@ body {
 
   .message.own {
     max-width: 50%;
+  }
+
+  .home-content {
+    max-width: 1100px;
   }
 }
 
@@ -565,8 +822,25 @@ body {
     padding: 20px;
   }
 
+  .home-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .home-content p {
+    margin: 10px auto 20px;
+  }
+
+  .features {
+    margin-top: 20px;
+  }
+
   .chat-container {
     height: 100vh;
+  }
+
+  .messages {
+    max-height: calc(100vh - 140px);
   }
 }
 
@@ -597,10 +871,27 @@ body {
   button {
     padding: clamp(12px, 3vw, 16px) clamp(24px, 5vw, 32px);
     min-height: 44px;
+    font-size: 1rem;
   }
 
   .input-area input {
     min-height: 44px;
+    font-size: 16px;
+    /* Prevents zoom on iOS */
+  }
+
+  .start-btn {
+    min-height: 48px;
+    padding: 16px 40px;
+  }
+
+  .gender-options button {
+    min-height: 50px;
+  }
+
+  /* Larger tap targets for mobile */
+  .message {
+    margin-bottom: 12px;
   }
 }
 

@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "emoji-picker-react": "^4.17.1",
+    "lottie-react": "^2.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.14.0",
