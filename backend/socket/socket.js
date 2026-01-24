@@ -38,16 +38,48 @@ module.exports = (io) => {
       io.to(roomId).emit("receiveMessage", message);
     });
 
-    // Typing indicator handlers
-    socket.on("typing-start", ({ roomId }) => {
-      if (roomId) {
-        socket.to(roomId).emit("user-typing");
-      }
+    // New message handlers for updated chat
+    socket.on("send-message", (data) => {
+      // Get user's room
+      User.findOne({ socketId: socket.id }).then((user) => {
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("receive-message", data);
+        }
+      });
     });
 
-    socket.on("typing-stop", ({ roomId }) => {
-      if (roomId) {
-        socket.to(roomId).emit("user-stopped-typing");
+    socket.on("message-seen", () => {
+      User.findOne({ socketId: socket.id }).then((user) => {
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("message-seen");
+        }
+      });
+    });
+
+    // Typing indicator handlers
+    socket.on("typing-start", () => {
+      User.findOne({ socketId: socket.id }).then((user) => {
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("user-typing");
+        }
+      });
+    });
+
+    socket.on("typing-stop", () => {
+      User.findOne({ socketId: socket.id }).then((user) => {
+        if (user && user.roomId) {
+          socket.to(user.roomId).emit("user-stopped-typing");
+        }
+      });
+    });
+
+    socket.on("disconnect-room", async () => {
+      const user = await User.findOne({ socketId: socket.id });
+      if (user && user.roomId) {
+        socket.leave(user.roomId);
+        user.status = "searching";
+        user.roomId = null;
+        await user.save();
       }
     });
 
