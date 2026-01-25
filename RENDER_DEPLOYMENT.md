@@ -1,12 +1,25 @@
 # 🚀 Deploying to Render
 
-The error you're seeing (`Cannot find module '/opt/render/project/src/index.js'`) happens because Render is trying to find an `index.js` file at the root of your project, but your backend code is actually inside the `backend/` folder.
+The error you're seeing (`Cannot find module '/opt/render/project/src/index.js'`) happens because Render is trying to find an `index.js` file at the root of your project.
 
-To deploy this project correctly on Render, you should create **two separate services**: one for the backend and one for the frontend.
+I have added a `render.yaml` file to your project. This is a **Blueprint** that tells Render exactly how to deploy your app automatically.
 
 ---
 
-## 1. Backend Deployment (Web Service)
+## 🚀 Easy Deployment (Using Blueprint)
+
+1.  **Go to Render Dashboard**.
+2.  Click **New +** → **Blueprint**.
+3.  Connect your GitHub repository.
+4.  Render will automatically see the `render.yaml` file and suggest creating two services:
+    *   `luvstor-backend` (Web Service)
+    *   `luvstor-frontend` (Static Site)
+5.  Click **Apply**.
+6.  **Important**: You will still need to add your secret variables (like `MONGO_URI`) in the Render dashboard for each service after they are created.
+
+---
+
+## 1. Manual Backend Deployment (If not using Blueprint)
 
 1.  **Create New Service**: On Render Dashboard, click **New +** → **Web Service**.
 2.  **Connect Repo**: Select your GitHub repository.
