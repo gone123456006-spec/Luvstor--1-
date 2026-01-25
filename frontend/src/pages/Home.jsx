@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCircle2, Zap, Shield } from 'lucide-react';
+import { UserCircle2, Zap, Shield, MessageCircle } from 'lucide-react';
 import logo from '../assets/logo.png';
+import chatIcon from '../assets/chat-icon.png';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -12,6 +13,23 @@ const Home = () => {
 
   return (
     <div className="home-container">
+      {/* Animated Chat Bubbles Background */}
+      <div className="chat-bubbles-bg">
+        {[...Array(12)].map((_, i) => (
+          <MessageCircle
+            key={i}
+            className="floating-bubble"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${15 + Math.random() * 10}s`,
+              fontSize: `${20 + Math.random() * 40}px`,
+              opacity: 0.1 + Math.random() * 0.15
+            }}
+          />
+        ))}
+      </div>
+
       <div className="home-content">
         <img src={logo} alt="Luvstor Logo" className="logo" />
 
@@ -26,7 +44,7 @@ const Home = () => {
         </p>
 
         <button className="start-btn" onClick={handleStartChat}>
-          Start Chatting
+          Start Chat
         </button>
 
         <div className="features">

@@ -33,14 +33,31 @@ const Gender = () => {
     setLoading(true);
     setError('');
 
+    // Support an optional env var `VITE_BACKEND_URL`. If not set, use Vite dev proxy at `/api`.
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const endpoint = BACKEND_URL
+      ? `${BACKEND_URL.replace(/\/$/, '')}/api/auth/anonymous`
+      : '/api/auth/anonymous';
+
     try {
-      const response = await fetch('http://localhost:5000/api/auth/anonymous', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        // Try to parse error body if available
+        let errMsg = `Request failed (${response.status})`;
+        try {
+          const errBody = await response.json();
+          errMsg = errBody.message || errMsg;
+        } catch (e) {}
+        setError(errMsg);
+        return;
+      }
 
       const data = await response.json();
 
@@ -52,7 +69,9 @@ const Gender = () => {
         setError(data.message || 'Login failed');
       }
     } catch (err) {
-      setError('Connection error. Is backend running?');
+      // Network or CORS error
+      const hostInfo = BACKEND_URL || 'http://localhost:5000 (via Vite proxy at /api)';
+      setError(`Cannot connect to backend at ${hostInfo}. Is it running?`);
     } finally {
       setLoading(false);
     }
@@ -60,65 +79,75 @@ const Gender = () => {
 
   return (
     <div className="gender-container">
-      <img src={logo} alt="Luvstor" className="gender-logo" />
+      <div className="gender-content-wrapper">
+        <img src={logo} alt="Luvstor" className="gender-logo" />
 
-      {/* Inputs Section */}
-      <div className="input-group">
-        <div className="input-wrapper">
-          <User className="input-icon" size={20} />
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleInputChange}
-          />
+        <h1 className="gender-welcome">Welcome to Luvstor!</h1>
+        <p className="gender-intro">Start your anonymous chat journey. Fill in your details below to get started.</p>
+
+        {/* Inputs Section */}
+        <div className="input-group">
+          <div className="input-wrapper">
+            <User className="input-icon" size={20} />
+            <input
+              type="text"
+              name="username"
+              placeholder="Enter your username"
+              value={formData.username}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="input-wrapper">
+            <Globe className="input-icon" size={20} />
+            <input
+              type="text"
+              name="country"
+              placeholder="Enter your country"
+              value={formData.country}
+              onChange={handleInputChange}
+            />
+          </div>
         </div>
-        <div className="input-wrapper">
-          <Globe className="input-icon" size={20} />
-          <input
-            type="text"
-            name="country"
-            placeholder="Country"
-            value={formData.country}
-            onChange={handleInputChange}
-          />
+
+        <h2>Choose Your Gender</h2>
+
+        <div className="gender-options">
+          <button
+            className={`gender-card ${formData.gender === 'male' ? 'active' : ''}`}
+            onClick={() => handleGenderSelect('male')}
+            type="button"
+          >
+            <Mars className="gender-icon" strokeWidth={1.5} />
+            <span className="label">Male</span>
+          </button>
+
+          <button
+            className={`gender-card ${formData.gender === 'female' ? 'active' : ''}`}
+            onClick={() => handleGenderSelect('female')}
+            type="button"
+          >
+            <Venus className="gender-icon" strokeWidth={1.5} />
+            <span className="label">Female</span>
+          </button>
         </div>
-      </div>
 
-      <h2>Choose Your Gender</h2>
+        {error && <p className="error-msg">{error}</p>}
 
-      <div className="gender-options">
         <button
-          className={`gender-card ${formData.gender === 'male' ? 'active' : ''}`}
-          onClick={() => handleGenderSelect('male')}
-          type="button"
+          className="start-btn continue-btn"
+          onClick={handleSubmit}
+          disabled={loading}
         >
-          <Mars className="gender-icon" strokeWidth={1.5} />
-          <span className="label">Male</span>
+          {loading ? 'Connecting...' : 'Continue'}
         </button>
 
-        <button
-          className={`gender-card ${formData.gender === 'female' ? 'active' : ''}`}
-          onClick={() => handleGenderSelect('female')}
-          type="button"
-        >
-          <Venus className="gender-icon" strokeWidth={1.5} />
-          <span className="label">Female</span>
-        </button>
-      </div>
-
-      {error && <p className="error-msg">{error}</p>}
-
-      <button
-        className="start-btn continue-btn"
-        onClick={handleSubmit}
-        disabled={loading}
-      >
-        {loading ? 'Connecting...' : 'Continue'}
-      </button>
-
-      <style>{`
+        <style>{`
+        .gender-logo {
+          width: 150px;
+          height: auto;
+          margin-top: -20px;
+          margin-bottom: 10px;
+        }
         .input-group {
           display: flex;
           flex-direction: column;
@@ -164,6 +193,7 @@ const Gender = () => {
           pointer-events: ${loading ? 'none' : 'auto'};
         }
       `}</style>
+      </div>
     </div>
   );
 };

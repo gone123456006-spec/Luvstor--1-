@@ -40,14 +40,15 @@ body {
 
 /* ===================== LOGO STYLES ===================== */
 .logo {
-  width: clamp(220px, 60vw, 400px);
+  width: clamp(200px, 50vw, 400px);
   height: auto;
-  margin: 0 auto 2rem;
+  margin: -20px auto 0.5rem;
   display: block;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
   animation: fadeInLogo 0.8s ease-out;
   background: transparent !important;
   mix-blend-mode: normal;
+  object-fit: contain;
 }
 
 .chat-logo {
@@ -79,16 +80,70 @@ body {
     var(--radial-gradient),
     url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='20' y='40' fill='rgba(255, 255, 255, 0.02)' font-family='Arial' font-size='14' font-weight='bold'%3ELuvstor%3C/text%3E%3Cpath d='M100 80 Q100 70 90 70 T80 80 T100 110 T120 80 T110 70 T100 80' fill='rgba(255, 255, 255, 0.03)' /%3E%3Cpath d='M150 150 L160 150 L155 140 Z' fill='rgba(255, 255, 255, 0.02)' /%3E%3Ccircle cx='40' cy='160' r='4' fill='rgba(255, 255, 255, 0.02)' /%3E%3Cpath d='M170 30 L180 30 M175 25 L175 35' stroke='rgba(255, 255, 255, 0.03)' stroke-width='2' /%3E%3Ctext x='120' y='180' fill='rgba(255, 255, 255, 0.01)' font-family='Arial' font-size='10'%3ELuvstorChat%3C/text%3E%3C/svg%3E");
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
   color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-bubbles-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floating-bubble {
+  position: absolute;
+  color: rgba(74, 144, 226, 0.3);
+  animation: floatUp 20s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(74, 144, 226, 0.4)) blur(0.5px);
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) translateX(0) rotate(0deg) scale(0.5);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  25% {
+    transform: translateY(75vh) translateX(-20px) rotate(90deg) scale(0.8);
+  }
+
+  50% {
+    transform: translateY(50vh) translateX(20px) rotate(180deg) scale(1.1);
+  }
+
+  75% {
+    transform: translateY(25vh) translateX(-15px) rotate(270deg) scale(0.9);
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-100px) translateX(0) rotate(360deg) scale(0.6);
+    opacity: 0;
+  }
 }
 
 .home-content {
   max-width: 1100px;
   width: 100%;
   text-align: center;
+  position: relative;
+  z-index: 10;
 }
 
 .home-content h1 {
@@ -181,14 +236,51 @@ body {
   text-align: center;
 }
 
+.gender-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+}
+
 .gender-logo {
-  width: 90px;
-  margin-bottom: 10px;
+  width: clamp(350px, 70vw, 550px);
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+  animation: fadeInLogo 0.8s ease-out;
 }
 
 .gender-animation {
   width: 220px;
   margin: 10px 0 20px;
+}
+
+.gender-welcome {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.gender-intro {
+  font-size: clamp(0.95rem, 3vw, 1.1rem);
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Increase logo size on smaller screens for better visibility */
+@media (max-width: 600px) {
+  .gender-logo {
+    width: 220px;
+  }
+
+  .gender-animation {
+    width: 200px;
+  }
 }
 
 .gender-container h2 {

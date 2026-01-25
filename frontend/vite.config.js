@@ -6,6 +6,16 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      // Proxy API requests during development to the backend
+      // This lets you call `/api/...` from the frontend and have Vite forward it to the backend.
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
+    },
   },
   build: {
     outDir: 'dist',

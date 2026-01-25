@@ -12,29 +12,56 @@ const Match = () => {
   const [status, setStatus] = useState('Connecting...');
 
   useEffect(() => {
+    console.log('[Match] Component mounted');
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+
+    console.log('[Match] Token exists:', !!token);
+    console.log('[Match] User data:', user ? JSON.parse(user) : 'No user data');
+
+    if (!token) {
+      console.error('[Match] No token found, redirecting to home');
+      setStatus('Authentication required. Redirecting...');
+      setTimeout(() => navigate('/'), 2000);
+      return;
+    }
+
     const newSocket = connectSocket();
 
     if (!newSocket) {
+      console.error('[Match] Failed to create socket connection');
       setStatus('Connection failed. Please try again.');
       return;
     }
 
-    setStatus('Looking for a match...');
+    console.log('[Match] Socket created, waiting for connection...');
 
-    // Join queue logic
-    newSocket.emit('joinQueue', { preference: 'both' });
+    newSocket.on('connect', () => {
+      console.log('[Match] Socket connected successfully!', newSocket.id);
+      setStatus('Looking for a match...');
+
+      // Join queue logic
+      console.log('[Match] Emitting joinQueue event');
+      newSocket.emit('joinQueue', { preference: 'both' });
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('[Match] Socket connection error:', error);
+      setStatus('Connection error. Please check backend.');
+    });
 
     const handleMatchFound = (data) => {
-      console.log('Match found:', data);
+      console.log('[Match] Match found:', data);
       navigate('/chat', { state: data });
     };
 
     const handleWaiting = () => {
+      console.log('[Match] Waiting for match...');
       setStatus('Waiting for available partner...');
     };
 
     const handleError = (err) => {
-      console.error(err);
+      console.error('[Match] Error received:', err);
       setStatus('Error connecting. Please try again.');
     };
 
@@ -43,9 +70,12 @@ const Match = () => {
     newSocket.on('error', handleError);
 
     return () => {
+      console.log('[Match] Cleaning up socket listeners');
       newSocket.off('matchFound', handleMatchFound);
       newSocket.off('waitingForMatch', handleWaiting);
       newSocket.off('error', handleError);
+      newSocket.off('connect');
+      newSocket.off('connect_error');
     };
   }, [navigate, connectSocket]);
 
