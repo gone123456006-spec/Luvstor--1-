@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
-import { Smile, LogOut } from 'lucide-react';
+import { Smile, LogOut, Send } from 'lucide-react';
 import logo from '../assets/logo.png';
 import '../chat.css';
 
@@ -284,7 +284,9 @@ const Chat = () => {
           className="send-btn"
           disabled={partnerStatus === 'left'}
           type="button"
-        />
+        >
+          <Send size={20} />
+        </button>
       </div>
 
       {showEmojiPicker && (

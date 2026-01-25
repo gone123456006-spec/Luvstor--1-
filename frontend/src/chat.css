@@ -591,15 +591,14 @@ textarea {
     border-radius: 50%;
 }
 
-.send-btn::after {
-    content: '➤';
-    font-size: 18px;
+.send-btn svg {
     position: relative;
     z-index: 2;
+    transform: rotate(-10deg) translateX(1px);
 }
 
-.send-btn svg {
-    display: none;
+.send-btn:hover svg {
+    transform: rotate(0deg) scale(1.1);
 }
 
 .send-btn:active:not(:disabled) {
