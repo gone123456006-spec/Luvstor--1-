@@ -15,10 +15,20 @@ app.use(cors());
 app.use(express.json());
 
 // Connect Database
-// Connect Database
 connectDB();
 
-// Routes
+// Root route (IMPORTANT)
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Backend is running'
+  });
+});
+
+// Ignore favicon
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
@@ -28,7 +38,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 
-// Error Handling Middleware (must be after routes)
+// Error Handling Middleware
 app.use(notFound);
 app.use(errorHandler);
 
