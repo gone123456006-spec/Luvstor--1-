@@ -230,6 +230,7 @@ textarea {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 16px 12px;
+    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -409,16 +410,21 @@ textarea {
 
 /* ============ INPUT SECTION ============ */
 .chat-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    padding: 16px 12px;
-    padding-bottom: calc(16px + var(--safe-area-inset-bottom));
+    padding: 18px 12px;
+    padding-bottom: calc(24px + var(--safe-area-inset-bottom));
     background: var(--bg-white);
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
     transition: all 0.3s ease;
-    min-height: 72px;
+    min-height: 80px;
+    z-index: 100;
 }
 
 .chat-input.emoji-open {
