@@ -123,7 +123,13 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll if input is not focused (keyboard not open)
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement?.tagName === 'INPUT';
+
+    if (!isInputFocused) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, isPartnerTyping]);
 
   const handleTyping = async (e) => {
@@ -265,7 +271,11 @@ const Chat = () => {
           placeholder={partnerStatus === 'left' ? "Partner disconnected" : "Chat on luvstor..."}
           value={inputValue}
           onChange={handleTyping}
-          onFocus={() => setShowEmojiPicker(false)}
+          onFocus={(e) => {
+            setShowEmojiPicker(false);
+            // Prevent auto-scroll by temporarily disabling smooth scroll
+            e.target.scrollIntoView({ behavior: 'auto', block: 'end' });
+          }}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           disabled={partnerStatus === 'left'}
         />
