@@ -26,8 +26,10 @@
     right: 0;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    padding: 14px 18px;
+    padding: 16px 18px;
+    min-height: 70px;
     background: linear-gradient(90deg, #360167, #561496);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -35,21 +37,18 @@
 }
 
 .chat-header img.chat-logo {
-    height: 28px;
+    height: 32px;
     width: auto;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     filter: drop-shadow(0 2px 5px rgba(255, 255, 255, 0.2));
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
 }
 
 .stranger-details {
     min-width: 0;
-    flex: 1;
+    flex: 0 1 auto;
+    max-width: 40%;
 }
 
 .stranger-details h4 {
@@ -108,10 +107,8 @@
     }
 }
 
-/* Next Button */
 .next-btn {
-    margin-left: auto;
-    padding: 8px 20px;
+    padding: 9px 20px;
     border-radius: 24px;
     border: 2px solid #ef4444;
     background: transparent;
@@ -120,6 +117,8 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .next-btn:hover {
@@ -135,8 +134,8 @@
 .chat-body {
     flex: 1;
     padding: 20px;
-    padding-top: 80px;
-    padding-bottom: 80px;
+    padding-top: 90px;
+    padding-bottom: 90px;
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;
@@ -299,7 +298,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px 18px;
+    padding: 16px 18px;
+    min-height: 70px;
     background: #1a0f2b;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 100;
