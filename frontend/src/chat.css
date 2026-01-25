@@ -901,6 +901,11 @@ textarea {
         padding-bottom: calc(12px + var(--safe-area-inset-bottom));
     }
 
+    /* Hide emoji button on mobile */
+    .emoji-btn {
+        display: none;
+    }
+
     .emoji-popup {
         height: 280px;
         bottom: calc(64px + var(--safe-area-inset-bottom));
@@ -918,6 +923,11 @@ textarea {
         max-width: 80%;
         padding: 13px 18px;
         border-radius: 18px;
+    }
+
+    /* Hide emoji button on mobile */
+    .emoji-btn {
+        display: none;
     }
 
     .emoji-popup {
