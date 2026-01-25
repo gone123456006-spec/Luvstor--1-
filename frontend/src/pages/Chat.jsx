@@ -260,19 +260,24 @@ const Chat = () => {
     <div className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''}`}>
       {/* HEADER */}
       <div className="chat-header">
-        <div className="chat-logo-container">
-          {logo ? (
-            <img src={logo} alt={partnerUsername} className="chat-logo" />
-          ) : (
-            <div className="chat-logo">{getInitials(partnerUsername)}</div>
-          )}
+        <div className="header-left">
+          <div className="partner-avatar">
+            {getInitials(partnerUsername)}
+          </div>
+          <div className="stranger-details">
+            <h4>{partnerUsername}</h4>
+            <span className={`status ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
+              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
+            </span>
+          </div>
         </div>
 
-        <div className="stranger-details">
-          <h4>{partnerUsername}</h4>
-          <span className={`status ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
-            {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
-          </span>
+        <div className="chat-logo-container">
+          {logo ? (
+            <img src={logo} alt="Luvstor" className="chat-logo" />
+          ) : (
+            <div className="chat-logo">LV</div>
+          )}
         </div>
 
         <button className="next-btn" onClick={handleNext}>
