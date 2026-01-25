@@ -280,8 +280,8 @@ const Chat = () => {
           <EmojiPicker
             onEmojiClick={onEmojiClick}
             theme="dark"
-            width={320}
-            height={300}
+            width="100%"
+            height="100%"
             previewConfig={{ showPreview: false }}
             searchDisabled
             skinTonesDisabled
@@ -290,17 +290,6 @@ const Chat = () => {
       )}
 
       <style>{`
-        .chat-container.full-screen {
-            max-width: 100% !important;
-            width: 100vw;
-            height: 100vh;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;
-        }
         .bubble.system {
             align-self: center;
             background: rgba(0,0,0,0.3);

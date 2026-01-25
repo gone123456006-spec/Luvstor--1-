@@ -13,6 +13,7 @@
     left: 0;
     right: 0;
     bottom: 0;
+    max-width: 100vw;
 }
 
 /* =========================
@@ -39,6 +40,12 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+}
+
+.stranger-details {
+    min-width: 0;
+    flex: 1;
 }
 
 .stranger-details h4 {
@@ -46,6 +53,9 @@
     font-size: 1rem;
     font-weight: 600;
     color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status {
@@ -303,6 +313,8 @@
 /* Input Field */
 .chat-input input {
     flex: 1;
+    min-width: 0;
+    /* Critical for flex shrinking */
     padding: 12px 18px;
     border-radius: 24px;
     border: 2px solid rgba(255, 255, 255, 0.15);
@@ -453,6 +465,7 @@
 
     .emoji-popup .EmojiPickerReact {
         width: 100% !important;
+        height: min(350px, 50vh) !important;
     }
 }
 
