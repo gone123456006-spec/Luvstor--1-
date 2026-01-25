@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Gender from './pages/Gender';
 import Match from './pages/Match';
 import Chat from './pages/Chat';
+import Auth from './pages/Auth';
 import './index.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="/gender" element={<Gender />} />
         <Route path="/match" element={<Match />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/auth" element={<Auth />} />
       </Routes>
     </Router>
   );
