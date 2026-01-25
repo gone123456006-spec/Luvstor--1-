@@ -170,19 +170,10 @@ textarea {
 
 .chat-logo {
     height: 32px;
-    width: 32px;
+    width: auto;
     margin: 0 12px;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
     flex-shrink: 0;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
 }
 
 .next-btn {
