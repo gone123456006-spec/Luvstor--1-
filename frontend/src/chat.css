@@ -33,24 +33,25 @@ body {
 }
 
 :root {
-    --primary: #2196F3;
-    --primary-dark: #1976D2;
+    --primary: #561496;
+    --primary-dark: #360167;
     --accent: #FFD369;
-    --bg-light: #F5F5F5;
-    --bg-white: #FFFFFF;
-    --text-primary: #000000;
-    --text-secondary: #757575;
-    --bubble-own: #000000;
-    --bubble-other: #E0E0E0;
-    --border-color: #E0E0E0;
-    --typing-color: #2196F3;
+    --bg-light: #0f0c29;
+    --bg-white: #1a0f2b;
+    --bg-gradient: linear-gradient(180deg, #360167 0%, #561496 50%, #AF1281 100%);
+    --text-primary: #FFFFFF;
+    --text-secondary: #B3B3B3;
+    --bubble-own: #5b21b6;
+    --bubble-other: rgba(255, 255, 255, 0.12);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --typing-color: #FFD369;
     --safe-area-inset-top: env(safe-area-inset-top, 0);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-    background: var(--bg-white);
+    background: var(--bg-gradient);
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
@@ -82,7 +83,7 @@ textarea {
     width: 100%;
     height: 100vh;
     height: 100dvh;
-    background: var(--bg-light);
+    background: var(--bg-gradient);
     overflow: hidden;
     position: fixed;
     top: 0;
@@ -106,10 +107,10 @@ textarea {
     align-items: center;
     justify-content: space-between;
     padding: calc(12px + var(--safe-area-inset-top)) 16px 12px 16px;
-    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%);
-    border-bottom: 2px solid #2a2a3e;
+    background: linear-gradient(90deg, #360167, #561496);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
     min-height: 56px;
 }
 
@@ -170,10 +171,19 @@ textarea {
 
 .chat-logo {
     height: 32px;
-    width: auto;
+    width: 32px;
     margin: 0 12px;
-    object-fit: contain;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .next-btn {
@@ -221,12 +231,11 @@ textarea {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 16px 12px;
-    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
     gap: 12px;
     scroll-behavior: smooth;
-    background: var(--bg-light);
+    background: var(--bg-gradient);
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 }
@@ -280,11 +289,12 @@ textarea {
 /* Own messages */
 .bubble.own {
     align-self: flex-end;
-    background: var(--bubble-own);
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
     color: white;
     border-bottom-right-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
     margin-right: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble.own p {
@@ -308,10 +318,13 @@ textarea {
 /* Other messages */
 .bubble.other {
     align-self: flex-start;
-    background: var(--bubble-other);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-primary);
     border-bottom-left-radius: 6px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-left: 2px solid rgba(255, 211, 105, 0.4);
     margin-left: 4px;
 }
 
@@ -333,8 +346,8 @@ textarea {
 /* System messages */
 .bubble.system {
     align-self: center;
-    background: transparent;
-    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.7);
     border: none;
     border-radius: 20px;
     padding: 12px 16px;
@@ -353,8 +366,8 @@ textarea {
     align-items: center;
     gap: 4px;
     padding: 12px 16px;
-    background: var(--bubble-other);
-    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     border-bottom-left-radius: 6px;
     max-width: 60px;
@@ -368,7 +381,7 @@ textarea {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #BDBDBD;
+    background: #ffd369;
     animation: typing 1.4s infinite;
 }
 
@@ -401,21 +414,16 @@ textarea {
 
 /* ============ INPUT SECTION ============ */
 .chat-input {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    padding: 18px 12px;
-    padding-bottom: calc(24px + var(--safe-area-inset-bottom));
-    background: var(--bg-white);
-    border-top: 1px solid var(--border-color);
+    padding: 12px 12px;
+    padding-bottom: calc(12px + var(--safe-area-inset-bottom));
+    background: #1a0f2b;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
     transition: all 0.3s ease;
-    min-height: 80px;
-    z-index: 100;
+    min-height: 60px;
 }
 
 .chat-input.emoji-open {
@@ -449,10 +457,10 @@ textarea {
     flex: 1;
     min-width: 0;
     padding: 10px 16px;
-    background: var(--bg-light);
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
-    color: var(--text-primary);
+    color: #fff;
     font-size: 16px;
     outline: none;
     transition: all 0.2s ease;
@@ -463,13 +471,13 @@ textarea {
 }
 
 .chat-input input::placeholder {
-    color: #BDBDBD;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .chat-input input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.08);
-    background: var(--bg-white);
+    border-color: #ffd369;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 4px rgba(255, 211, 105, 0.15);
 }
 
 .chat-input input:disabled {
@@ -485,13 +493,13 @@ textarea {
     width: 44px;
     height: 44px;
     border: none;
-    background: var(--primary);
-    color: white;
+    background: linear-gradient(135deg, #ffd369 0%, #ffbf00 100%);
+    color: #000;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.15s ease;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+    box-shadow: 0 4px 16px rgba(255, 211, 105, 0.4);
     font-size: 20px;
     font-weight: bold;
     min-width: 44px;
@@ -513,8 +521,8 @@ textarea {
 
 .send-btn:active:not(:disabled) {
     transform: scale(0.88);
-    background: var(--primary-dark);
-    box-shadow: 0 1px 4px rgba(33, 150, 243, 0.3);
+    background: linear-gradient(135deg, #ffbf00 0%, #ff9f00 100%);
+    box-shadow: 0 2px 8px rgba(255, 211, 105, 0.3);
 }
 
 .send-btn:disabled {
