@@ -629,13 +629,13 @@ textarea {
     width: 44px;
     height: 44px;
     border: none;
-    background: linear-gradient(135deg, #ffd369 0%, #ffb700 100%);
+    background: #ffd369;
     color: #000;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
-    box-shadow: 0 6px 16px rgba(255, 211, 105, 0.5);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     font-size: 20px;
     font-weight: bold;
     min-width: 44px;
@@ -644,38 +644,28 @@ textarea {
     user-select: none;
     -webkit-appearance: none;
     appearance: none;
-    position: relative;
-    overflow: hidden;
-}
-
-.send-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
-    border-radius: 50%;
 }
 
 .send-btn svg {
     position: relative;
     z-index: 2;
-    transform: rotate(-10deg) translateX(1px);
 }
 
-.send-btn:hover svg {
-    transform: rotate(0deg) scale(1.1);
+.send-btn:hover:not(:disabled) {
+    background: #ffbf00;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .send-btn:active:not(:disabled) {
-    transform: scale(0.85);
-    background: linear-gradient(135deg, #ffb700 0%, #ff9f00 100%);
-    box-shadow: 0 3px 8px rgba(255, 211, 105, 0.4);
+    transform: scale(0.9);
+    background: #ffb700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    box-shadow: 0 2px 6px rgba(255, 211, 105, 0.2);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ============ EMOJI PICKER ============ */
@@ -816,7 +806,11 @@ textarea {
         gap: 8px;
     }
 
-    .emoji-btn,
+    /* Hide emoji button on mobile */
+    .emoji-btn {
+        display: none;
+    }
+
     .send-btn {
         width: 40px;
         height: 40px;
