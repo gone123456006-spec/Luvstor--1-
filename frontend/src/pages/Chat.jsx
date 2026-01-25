@@ -2,12 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
 import { Smile, Send, LogOut } from 'lucide-react';
-import { useSocket } from '../context/SocketContext';
 import logo from '../assets/logo.png';
 import '../chat.css';
 
 const Chat = () => {
-  const { socket } = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -15,55 +13,97 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [partnerStatus, setPartnerStatus] = useState('online');
 
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const lastUpdateRef = useRef(null); // Timestamp of last update to fetch new messages
 
   const roomId = location.state?.roomId;
   const partnerUsername = location.state?.partnerUsername || 'Stranger';
   const myUsername = 'You';
 
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
+
   useEffect(() => {
-    if (!socket || !roomId) {
+    if (!roomId) {
       navigate('/match');
       return;
     }
 
-    // Join the room
-    socket.emit('joinRoom', roomId);
+    // Initial load
+    lastUpdateRef.current = new Date(0).toISOString();
 
-    const handleReceiveMessage = (data) => {
-      setMessages((prev) => [
-        ...prev,
-        { ...data, isOwn: false, seen: true }
-      ]);
-      // socket.emit('message-seen', { roomId }); // Backend doesn't support room arg in message-seen yet?
+    const fetchUpdates = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/chat/updates?roomId=${roomId}&since=${lastUpdateRef.current}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.status === 'partner_disconnected' || data.status === 'disconnected') {
+          if (partnerStatus !== 'left') {
+            setPartnerStatus('left');
+            setMessages(prev => [...prev, { system: true, message: 'Partner disconnected.' }]);
+          }
+          return;
+        }
+
+        // Processing messages
+        if (data.messages && data.messages.length > 0) {
+          // Update timestamp to the last message's time
+          const validMessages = data.messages.filter(m => m.sender !== JSON.parse(localStorage.getItem('user'))._id);
+
+          // Actually, we want to update the 'since' based on ANY message we received to avoid duplicates,
+          // but we also need to account for our own messages being displayed optimistically.
+          // The safest way with simple polling is to rely on 'createdAt' from the server.
+          // But we already show our own messages optimistically.
+          // So we only want to ADD messages where sender != me.
+          const newPartnerMessages = data.messages.filter(msg =>
+            msg.sender !== JSON.parse(localStorage.getItem('user'))._id
+          );
+
+          if (newPartnerMessages.length > 0) {
+            const formattedMsgs = newPartnerMessages.map(msg => ({
+              message: msg.content,
+              sender: partnerUsername, // Or msg.sender
+              timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isOwn: false,
+              seen: true, // Auto-mark as seen for now
+              _id: msg._id
+            }));
+
+            setMessages(prev => {
+              // Dedup based on ID if necessary (though timestamp filter should handle it)
+              const existingIds = new Set(prev.map(p => p._id));
+              const uniqueNew = formattedMsgs.filter(m => !existingIds.has(m._id));
+              return [...prev, ...uniqueNew];
+            });
+          }
+
+          // Update time reference to the very last message in the batch (regardless of sender)
+          // to fetch only newer ones next time.
+          const lastMsg = data.messages[data.messages.length - 1];
+          lastUpdateRef.current = lastMsg.createdAt;
+        }
+
+        setIsPartnerTyping(data.isPartnerTyping);
+
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
     };
 
-    const handleUserTyping = () => setIsPartnerTyping(true);
-    const handleUserStoppedTyping = () => setIsPartnerTyping(false);
+    // Poll every 1 second
+    const intervalId = setInterval(fetchUpdates, 1000);
 
-    const handlePartnerDisconnected = () => {
-      setMessages(prev => [...prev, { system: true, message: 'Partner disconnected.' }]);
-    };
-
-    socket.on('receive-message', handleReceiveMessage); // Check event name compatibility
-    socket.on('receiveMessage', handleReceiveMessage); // Try both just in case
-    socket.on('user-typing', handleUserTyping);
-    socket.on('user-stopped-typing', handleUserStoppedTyping);
-    socket.on('partnerDisconnected', handlePartnerDisconnected);
-
-    return () => {
-      socket.off('receive-message', handleReceiveMessage);
-      socket.off('receiveMessage', handleReceiveMessage);
-      socket.off('user-typing', handleUserTyping);
-      socket.off('user-stopped-typing', handleUserStoppedTyping);
-      socket.off('partnerDisconnected', handlePartnerDisconnected);
-      // Don't disconnect socket here, just leave room logic if needed? 
-      // SocketContext handles disconnect on app unmount or explicit disconnect
-    };
-  }, [socket, roomId, navigate]);
+    return () => clearInterval(intervalId);
+  }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
 
   /* ---------------- Emoji Toggle Logic ---------------- */
   useEffect(() => {
@@ -86,40 +126,61 @@ const Chat = () => {
   }, [messages, isPartnerTyping]);
 
   /* ---------------- Typing Logic ---------------- */
-  const handleTyping = (e) => {
+  const handleTyping = async (e) => {
     setInputValue(e.target.value);
 
-    socket?.emit('typing-start', { roomId });
+    // Rate limit typing updates
+    if (!typingTimeoutRef.current) {
+      // Send typing indicator
+      try {
+        await fetch(`${BACKEND_URL}/api/chat/typing`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (e) { }
 
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      socket?.emit('typing-stop', { roomId });
-    }, 1200);
+      typingTimeoutRef.current = setTimeout(() => {
+        typingTimeoutRef.current = null;
+      }, 2000); // Only send once every 2 seconds
+    }
   };
 
   /* ---------------- Send Message ---------------- */
-  const sendMessage = () => {
-    if (!inputValue.trim() || !socket) return;
+  const sendMessage = async () => {
+    if (!inputValue.trim()) return;
 
+    const messageContent = inputValue;
     const messageData = {
       sender: myUsername,
-      message: inputValue,
+      message: messageContent,
       timestamp: new Date().toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
       }),
       seen: false,
+      isOwn: true,
+      _id: 'temp-' + Date.now() // Temporary ID
     };
 
-    // Emit to backend
-    socket.emit('send-message', { roomId, message: inputValue });
-    // Note: Backend 'sendMessage' handler expects { roomId, message }
-    // Frontend local update
-    setMessages((prev) => [...prev, { ...messageData, isOwn: true }]);
-
+    // Optimistic UI update
+    setMessages((prev) => [...prev, messageData]);
     setInputValue('');
     setShowEmojiPicker(false);
-    socket.emit('typing-stop', { roomId });
+
+    try {
+      await fetch(`${BACKEND_URL}/api/chat/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ roomId, message: messageContent })
+      });
+
+    } catch (error) {
+      console.error('Send message error:', error);
+      // Could mark message as failed in UI
+    }
   };
 
   /* ---------------- Emoji ---------------- */
@@ -128,8 +189,13 @@ const Chat = () => {
   };
 
   /* ---------------- Next Stranger ---------------- */
-  const handleNext = () => {
-    socket?.emit('disconnect-room');
+  const handleNext = async () => {
+    try {
+      await fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) { }
     navigate('/match');
   };
 
@@ -141,8 +207,8 @@ const Chat = () => {
           <img src={logo} alt="Luvstor" className="chat-logo" />
           <div className="stranger-details">
             <h4>{partnerUsername}</h4>
-            <span className={`status ${isPartnerTyping ? 'typing' : 'online'}`}>
-              {isPartnerTyping ? 'typing...' : 'Online'}
+            <span className={`status ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
+              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
             </span>
           </div>
         </div>
@@ -182,7 +248,7 @@ const Chat = () => {
       </div>
 
       {/* INPUT */}
-      <div className="chat-input">
+      <div className="chat-input" style={{ pointerEvents: partnerStatus === 'left' ? 'none' : 'auto', opacity: partnerStatus === 'left' ? 0.5 : 1 }}>
         <button
           className="emoji-btn"
           onClick={toggleEmojiPicker}
@@ -192,14 +258,15 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder="Chat on luvstor..."
+          placeholder={partnerStatus === 'left' ? "Partner disconnected" : "Chat on luvstor..."}
           value={inputValue}
           onChange={handleTyping}
           onFocus={() => setShowEmojiPicker(false)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          disabled={partnerStatus === 'left'}
         />
 
-        <button onClick={sendMessage} className="send-btn">
+        <button onClick={sendMessage} className="send-btn" disabled={partnerStatus === 'left'}>
           <Send size={20} />
         </button>
       </div>

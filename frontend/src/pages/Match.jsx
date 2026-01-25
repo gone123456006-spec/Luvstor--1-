@@ -2,92 +2,95 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import { X } from 'lucide-react';
-import { useSocket } from '../context/SocketContext';
 import logo from '../assets/logo.png';
 import searchingAnimation from '../assets/searching.json';
 
 const Match = () => {
   const navigate = useNavigate();
-  const { socket, connectSocket, disconnectSocket } = useSocket();
   const [status, setStatus] = useState('Connecting...');
 
   useEffect(() => {
-    console.log('[Match] Component mounted');
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
 
-    console.log('[Match] Token exists:', !!token);
-    console.log('[Match] User data:', user ? JSON.parse(user) : 'No user data');
-
     if (!token) {
-      console.error('[Match] No token found, redirecting to home');
       setStatus('Authentication required. Redirecting...');
       setTimeout(() => navigate('/'), 2000);
       return;
     }
 
-    const newSocket = connectSocket();
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-    if (!newSocket) {
-      console.error('[Match] Failed to create socket connection');
-      setStatus('Connection failed. Please try again.');
-      return;
-    }
+    let intervalId;
 
-    console.log('[Match] Socket created, waiting for connection...');
+    const joinQueue = async () => {
+      try {
+        setStatus('Joining queue...');
+        const response = await fetch(`${BACKEND_URL}/api/chat/queue/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ preference: 'both' })
+        });
 
-    const startSearching = () => {
-      console.log('[Match] Starting search process...');
-      setStatus('Looking for a match...');
-      newSocket.emit('joinQueue', { preference: 'both' });
+        if (!response.ok) throw new Error('Failed to join queue');
+
+        setStatus('Looking for a match...');
+
+        // Start polling
+        intervalId = setInterval(checkMatchStatus, 2000); // Poll every 2 seconds
+      } catch (error) {
+        console.error('Queue join error:', error);
+        setStatus('Error joining queue. Please try again.');
+      }
     };
 
-    if (newSocket.connected) {
-      console.log('[Match] Socket already connected, joining queue');
-      startSearching();
-    } else {
-      newSocket.on('connect', () => {
-        console.log('[Match] Socket connected successfully!', newSocket.id);
-        startSearching();
-      });
-    }
+    const checkMatchStatus = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/chat/queue/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('[Match] Socket connection error:', error);
-      setStatus('Connection error. Please check backend.');
-    });
+        if (!response.ok) return; // Keep trying or handle error
 
-    const handleMatchFound = (data) => {
-      console.log('[Match] Match found:', data);
-      navigate('/chat', { state: data });
+        const data = await response.json();
+
+        if (data.status === 'matched') {
+          clearInterval(intervalId);
+          navigate('/chat', { state: data });
+        } else if (data.status === 'searching') {
+          // Still searching
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
     };
 
-    const handleWaiting = () => {
-      console.log('[Match] Waiting for match...');
-      setStatus('Waiting for available partner...');
-    };
-
-    const handleError = (err) => {
-      console.error('[Match] Error received:', err);
-      setStatus('Error connecting. Please try again.');
-    };
-
-    newSocket.on('matchFound', handleMatchFound);
-    newSocket.on('waitingForMatch', handleWaiting);
-    newSocket.on('error', handleError);
+    joinQueue();
 
     return () => {
-      console.log('[Match] Cleaning up socket listeners');
-      newSocket.off('matchFound', handleMatchFound);
-      newSocket.off('waitingForMatch', handleWaiting);
-      newSocket.off('error', handleError);
-      newSocket.off('connect');
-      newSocket.off('connect_error');
+      if (intervalId) clearInterval(intervalId);
+      // Optional: Leave queue on unmount if not matched? 
+      // User might just be refreshing or navigating. 
+      // Ideally we leave queue only if cancelling.
     };
-  }, [navigate, connectSocket]);
+  }, [navigate]);
 
-  const handleCancel = () => {
-    disconnectSocket();
+  const handleCancel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      await fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (e) { console.error(e); }
     navigate('/');
   };
 

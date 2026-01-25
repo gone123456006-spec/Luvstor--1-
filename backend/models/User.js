@@ -45,10 +45,7 @@ const userSchema = new mongoose.Schema({
     enum: ['same', 'opposite', 'both'],
     default: 'both'
   },
-  socketId: {
-    type: String,
-    default: null
-  },
+
   isActive: {
     type: Boolean,
     default: false
@@ -57,6 +54,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['offline', 'online', 'searching', 'chatting'],
     default: 'offline'
+  },
+  lastTyping: {
+    type: Date,
+    default: null
   },
   roomId: {
     type: String,

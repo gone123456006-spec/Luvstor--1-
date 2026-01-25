@@ -54,7 +54,7 @@ const Gender = () => {
         try {
           const errBody = await response.json();
           errMsg = errBody.message || errMsg;
-        } catch (e) {}
+        } catch (e) { }
         setError(errMsg);
         return;
       }
@@ -70,7 +70,7 @@ const Gender = () => {
       }
     } catch (err) {
       // Network or CORS error
-      const hostInfo = BACKEND_URL || 'http://localhost:5000 (via Vite proxy at /api)';
+      const hostInfo = BACKEND_URL || 'http://localhost:5001';
       setError(`Cannot connect to backend at ${hostInfo}. Is it running?`);
     } finally {
       setLoading(false);
