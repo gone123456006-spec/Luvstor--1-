@@ -16,7 +16,9 @@ app.use(express.json());
 
 // Fix for double slashes in URLs (common in deployment)
 app.use((req, res, next) => {
-  req.url = req.url.replace(/\/+/g, '/');
+  if (req.url.startsWith('//')) {
+    req.url = req.url.replace(/^\/+/, '/');
+  }
   next();
 });
 
