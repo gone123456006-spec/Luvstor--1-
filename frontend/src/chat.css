@@ -342,7 +342,13 @@ textarea {
     flex-direction: column;
     gap: 12px;
     scroll-behavior: smooth;
-    background: var(--bg-gradient);
+    background-color: #0a1014;
+    background-image:
+        linear-gradient(rgba(10, 16, 20, 0.88), rgba(10, 16, 20, 0.88)),
+        url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+    background-repeat: repeat;
+    background-size: 412.5px 749.25px;
+    background-blend-mode: overlay;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     position: relative;
