@@ -29,6 +29,26 @@ const Chat = () => {
   const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
   const token = localStorage.getItem('token');
 
+  useEffect(() => {
+    // Handle page refresh/close - clear messages and disconnect
+    const handlePageUnload = async () => {
+      try {
+        await fetch(`${BACKEND_URL}/api/chat/leave`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (e) { }
+      setMessages([]);
+    };
+
+    // Handle browser back/refresh
+    window.addEventListener('beforeunload', handlePageUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handlePageUnload);
+    };
+  }, [token, BACKEND_URL]);
+
   // Get user initials for avatar
   const getInitials = (name) => {
     return name
@@ -107,7 +127,14 @@ const Chat = () => {
 
     const intervalId = setInterval(fetchUpdates, 1000);
 
-    return () => clearInterval(intervalId);
+    // Cleanup: Clear messages and disconnect when component unmounts
+    return () => {
+      clearInterval(intervalId);
+      // Clear messages on unmount
+      setMessages([]);
+      setPartnerStatus('online');
+      setIsPartnerTyping(false);
+    };
   }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
 
   useEffect(() => {
