@@ -20,6 +20,7 @@ const Chat = () => {
   const typingTimeoutRef = useRef(null);
   const lastUpdateRef = useRef(null);
   const inputRef = useRef(null);
+  const chatBodyRef = useRef(null);
 
   const roomId = location.state?.roomId;
   const partnerUsername = location.state?.partnerUsername || 'Stranger';
@@ -227,7 +228,7 @@ const Chat = () => {
       </div>
 
       {/* MESSAGES */}
-      <div className="chat-body">
+      <div className="chat-body" ref={chatBodyRef}>
         {messages.map((msg, idx) => (
           <div
             key={idx}
