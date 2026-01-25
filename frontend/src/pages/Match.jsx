@@ -36,14 +36,21 @@ const Match = () => {
 
     console.log('[Match] Socket created, waiting for connection...');
 
-    newSocket.on('connect', () => {
-      console.log('[Match] Socket connected successfully!', newSocket.id);
+    const startSearching = () => {
+      console.log('[Match] Starting search process...');
       setStatus('Looking for a match...');
-
-      // Join queue logic
-      console.log('[Match] Emitting joinQueue event');
       newSocket.emit('joinQueue', { preference: 'both' });
-    });
+    };
+
+    if (newSocket.connected) {
+      console.log('[Match] Socket already connected, joining queue');
+      startSearching();
+    } else {
+      newSocket.on('connect', () => {
+        console.log('[Match] Socket connected successfully!', newSocket.id);
+        startSearching();
+      });
+    }
 
     newSocket.on('connect_error', (error) => {
       console.error('[Match] Socket connection error:', error);

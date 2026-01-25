@@ -62,11 +62,23 @@ module.exports = (io) => {
           console.log(`[QUEUE] ${user.username} (${user.gender}) is searching...`);
 
           // Simple match query - find ANY other user who is searching
-          const match = await User.findOne({
+          let match = await User.findOne({
             _id: { $ne: user._id },
             status: 'searching',
             socketId: { $ne: null }
           });
+
+          // Sanity check: verify the potential match's socket is actually active
+          if (match && !io.sockets.sockets.get(match.socketId)) {
+            console.log(`[QUEUE] Found stale user ${match.username}, resetting...`);
+            await User.findByIdAndUpdate(match._id, { status: 'offline', socketId: null });
+            // Try to find another one
+            match = await User.findOne({
+              _id: { $ne: user._id },
+              status: 'searching',
+              socketId: { $ne: null }
+            });
+          }
 
           if (match) {
             console.log(`[MATCH] Found! ${user.username} <-> ${match.username}`);
