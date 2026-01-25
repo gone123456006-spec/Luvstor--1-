@@ -30,6 +30,12 @@ const Chat = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
+    // Clear any persisted messages from previous sessions
+    const clearPreviousSession = () => {
+      sessionStorage.removeItem('chat_messages');
+      sessionStorage.removeItem('chat_room');
+    };
+
     // Handle page refresh/close - clear messages and disconnect
     const handlePageUnload = async () => {
       try {
@@ -38,8 +44,11 @@ const Chat = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
       } catch (e) { }
-      setMessages([]);
+      clearPreviousSession();
     };
+
+    // Clear on mount to ensure fresh start
+    clearPreviousSession();
 
     // Handle browser back/refresh
     window.addEventListener('beforeunload', handlePageUnload);
@@ -130,10 +139,21 @@ const Chat = () => {
     // Cleanup: Clear messages and disconnect when component unmounts
     return () => {
       clearInterval(intervalId);
-      // Clear messages on unmount
+
+      // Clear messages and reset state on unmount
       setMessages([]);
       setPartnerStatus('online');
       setIsPartnerTyping(false);
+
+      // Clear session storage
+      sessionStorage.removeItem('chat_messages');
+      sessionStorage.removeItem('chat_room');
+
+      // Notify backend of disconnect
+      fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => { });
     };
   }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
 
@@ -222,9 +242,16 @@ const Chat = () => {
       });
     } catch (e) { }
 
+    // Clear all messages and state
     setMessages([]);
     setPartnerStatus('online');
     setIsPartnerTyping(false);
+    setInputValue('');
+    setShowEmojiPicker(false);
+
+    // Clear session storage
+    sessionStorage.removeItem('chat_messages');
+    sessionStorage.removeItem('chat_room');
 
     navigate('/match');
   };
