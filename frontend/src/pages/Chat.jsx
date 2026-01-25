@@ -19,6 +19,7 @@ const Chat = () => {
   const emojiPickerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const lastUpdateRef = useRef(null);
+  const inputRef = useRef(null);
 
   const roomId = location.state?.roomId;
   const partnerUsername = location.state?.partnerUsername || 'Stranger';
