@@ -59,14 +59,18 @@ const Chat = () => {
           // Update timestamp to the last message's time
           const validMessages = data.messages.filter(m => m.sender !== JSON.parse(localStorage.getItem('user'))._id);
 
-          // Actually, we want to update the 'since' based on ANY message we received to avoid duplicates,
-          // but we also need to account for our own messages being displayed optimistically.
-          // The safest way with simple polling is to rely on 'createdAt' from the server.
-          // But we already show our own messages optimistically.
-          // So we only want to ADD messages where sender != me.
-          const newPartnerMessages = data.messages.filter(msg =>
-            msg.sender !== JSON.parse(localStorage.getItem('user'))._id
-          );
+          // LOGGING FOR DEBUGGING
+          const valUser = localStorage.getItem('user');
+          if (!valUser) return;
+
+          const userObj = JSON.parse(valUser);
+          // authController returns { id, username ... }, not _id at root of object
+          const myUserId = userObj.id || userObj._id;
+
+          const newPartnerMessages = data.messages.filter(msg => {
+            const msgSender = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+            return msgSender.toString() !== myUserId.toString();
+          });
 
           if (newPartnerMessages.length > 0) {
             const formattedMsgs = newPartnerMessages.map(msg => ({
