@@ -593,7 +593,7 @@ textarea {
     width: 44px;
     height: 44px;
     border: none;
-    background: rgba(255, 211, 105, 0.1);
+    background: transparent;
     cursor: pointer;
     border-radius: 50%;
     transition: all 0.2s ease;
@@ -602,13 +602,11 @@ textarea {
     user-select: none;
     min-width: 44px;
     min-height: 44px;
-    border: 2px solid rgba(255, 211, 105, 0.2);
 }
 
 .emoji-btn:active {
-    background: rgba(255, 211, 105, 0.25);
-    transform: scale(0.9);
-    box-shadow: 0 0 12px rgba(255, 211, 105, 0.3);
+    background: rgba(255, 211, 105, 0.15);
+    transform: scale(0.92);
 }
 
 .chat-input input {
@@ -832,11 +830,7 @@ textarea {
         gap: 8px;
     }
 
-    /* Hide emoji button on mobile */
-    .emoji-btn {
-        display: none;
-    }
-
+    .emoji-btn,
     .send-btn {
         width: 40px;
         height: 40px;
@@ -901,11 +895,6 @@ textarea {
         padding-bottom: calc(12px + var(--safe-area-inset-bottom));
     }
 
-    /* Hide emoji button on mobile */
-    .emoji-btn {
-        display: none;
-    }
-
     .emoji-popup {
         height: 280px;
         bottom: calc(64px + var(--safe-area-inset-bottom));
@@ -923,11 +912,6 @@ textarea {
         max-width: 80%;
         padding: 13px 18px;
         border-radius: 18px;
-    }
-
-    /* Hide emoji button on mobile */
-    .emoji-btn {
-        display: none;
     }
 
     .emoji-popup {
