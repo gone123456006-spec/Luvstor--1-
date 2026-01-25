@@ -469,6 +469,7 @@ textarea {
     border-color: #ffd369;
     background: rgba(255, 255, 255, 0.15);
     box-shadow: 0 0 0 4px rgba(255, 211, 105, 0.15);
+    scroll-behavior: auto;
 }
 
 .chat-input input:disabled {
