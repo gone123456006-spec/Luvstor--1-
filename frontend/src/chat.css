@@ -20,6 +20,10 @@
    HEADER
 ========================= */
 .chat-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -27,7 +31,7 @@
     background: linear-gradient(90deg, #360167, #561496);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    z-index: 10;
+    z-index: 100;
 }
 
 .chat-header img.chat-logo {
@@ -131,7 +135,10 @@
 .chat-body {
     flex: 1;
     padding: 20px;
+    padding-top: 80px;
+    padding-bottom: 80px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -285,12 +292,17 @@
    INPUT AREA
 ========================= */
 .chat-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 14px 18px;
     background: #1a0f2b;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 100;
 }
 
 /* Emoji Button */
