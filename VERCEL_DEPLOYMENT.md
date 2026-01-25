@@ -28,6 +28,11 @@ Vercel is an excellent choice for hosting your **frontend** (Vite/React). Howeve
 
 ---
 
+## 🛠️ Handling 404 Errors (SPA Routing)
+I have added a `vercel.json` file in the `frontend` directory. This file is **crucial** because it tells Vercel to redirect all traffic to `index.html`, allowing React Router to handle the pages. Without this, refreshing the page or visiting a link like `/match` directly would show a **404 error**.
+
+---
+
 ## 🔧 Step 2: Update Backend CORS
 For the frontend to talk to the backend, you must allow your new Vercel URL in your backend's CORS settings.
 
