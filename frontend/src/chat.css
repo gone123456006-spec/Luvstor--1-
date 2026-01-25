@@ -222,7 +222,13 @@ textarea {
     flex-direction: column;
     gap: 12px;
     scroll-behavior: smooth;
-    background: var(--bg-gradient);
+    background-color: #0b141a;
+    background-image:
+        linear-gradient(rgba(11, 20, 26, 0.85), rgba(11, 20, 26, 0.85)),
+        url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+    background-repeat: repeat;
+    background-size: 400px;
+    background-blend-mode: multiply;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 }
