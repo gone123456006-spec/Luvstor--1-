@@ -192,7 +192,7 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder="Type a message..."
+          placeholder="Chat on luvstor..."
           value={inputValue}
           onChange={handleTyping}
           onFocus={() => setShowEmojiPicker(false)}

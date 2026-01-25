@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCircle2, Zap, Shield, MessageCircle } from 'lucide-react';
 import logo from '../assets/logo.png';
-import chatIcon from '../assets/chat-icon.png';
 
 const Home = () => {
   const navigate = useNavigate();
