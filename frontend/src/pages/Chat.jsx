@@ -200,6 +200,12 @@ const Chat = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
     } catch (e) { }
+
+    // Clear messages before finding new partner
+    setMessages([]);
+    setPartnerStatus('online');
+    setIsPartnerTyping(false);
+
     navigate('/match');
   };
 
