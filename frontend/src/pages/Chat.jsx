@@ -124,13 +124,10 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Only scroll if input is not focused (keyboard not open)
-    const activeElement = document.activeElement;
-    const isInputFocused = activeElement?.tagName === 'INPUT';
-
-    if (!isInputFocused) {
+    // Auto-scroll to latest message
+    setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    }, 100);
   }, [messages, isPartnerTyping]);
 
   const handleTyping = async (e) => {
