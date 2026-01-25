@@ -24,7 +24,7 @@ const Chat = () => {
   const partnerUsername = location.state?.partnerUsername || 'Stranger';
   const myUsername = 'You';
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
   const token = localStorage.getItem('token');
 
   useEffect(() => {

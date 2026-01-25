@@ -14,6 +14,12 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
+// Fix for double slashes in URLs (common in deployment)
+app.use((req, res, next) => {
+  req.url = req.url.replace(/\/+/g, '/');
+  next();
+});
+
 // Connect Database
 connectDB();
 

@@ -53,7 +53,7 @@ const Gender = () => {
     setLoading(true);
     setError('');
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
     // If logged in, we might just be updating preference/profile locally or skipping to match
     // But for now, let's treat this as "Confirm Profile" before matching
 
