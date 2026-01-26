@@ -202,8 +202,8 @@ const Gender = () => {
         }
         .auth-btn:hover {
           background: rgba(255,255,255,0.1);
-          border-color: #ffd369;
-          color: #ffd369;
+          border-color: var(--accent-yellow, #ffd369);
+          color: var(--accent-yellow, #ffd369);
         }
         .gender-logo {
           width: 150px;
@@ -267,8 +267,9 @@ const Gender = () => {
         }
         .continue-btn {
           margin-top: 30px;
+          border-radius: 30px;
           width: 100%;
-          max-width: 200px;
+          max-width: 250px;
           opacity: ${loading || !formData.gender || !formData.username || !formData.country ? 0.5 : 1};
           pointer-events: ${loading ? 'none' : 'auto'};
         }

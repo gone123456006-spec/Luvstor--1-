@@ -45,6 +45,8 @@ body {
     --typing-color: #FFD369;
     --safe-area-inset-top: env(safe-area-inset-top, 0);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+    --btn-gradient: linear-gradient(135deg, #ffd369 0%, #ff9f00 100%);
+    --btn-glow: 0 4px 15px rgba(255, 211, 105, 0.3);
 }
 
 body {
@@ -204,8 +206,8 @@ textarea {
     justify-content: center;
     gap: 6px;
     padding: 8px 20px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: #fff;
+    background: var(--btn-gradient);
+    color: #000;
     border: none;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -216,6 +218,7 @@ textarea {
     letter-spacing: 0.5px;
     flex-shrink: 0;
     min-height: 32px;
+    box-shadow: var(--btn-glow);
 }
 
 .next-btn:hover {
@@ -581,9 +584,7 @@ textarea {
     border-radius: 50%;
     border: none;
 
-    background: linear-gradient(135deg,
-            #ffd369,
-            #ffb700);
+    background: var(--btn-gradient);
 
     display: flex;
     align-items: center;

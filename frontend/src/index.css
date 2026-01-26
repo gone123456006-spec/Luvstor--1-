@@ -7,6 +7,9 @@
   --chat-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --accent-yellow: #ffd369;
   --accent-yellow-hover: #ffbf00;
+  --btn-gradient: linear-gradient(135deg, #ffd369 0%, #ff9f00 100%);
+  --btn-glow: 0 4px 15px rgba(255, 211, 105, 0.3);
+  --btn-glow-hover: 0 6px 20px rgba(255, 211, 105, 0.4);
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -173,18 +176,18 @@ body {
   border: none;
   border-radius: 30px;
   font-size: clamp(1rem, 3vw, 1.1rem);
-  background: #ffd369;
+  background: var(--btn-gradient);
   color: #000;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(255, 211, 105, 0.3);
+  box-shadow: var(--btn-glow);
 }
 
 .start-btn:hover {
   transform: scale(1.05);
-  background: #ffbf00;
-  box-shadow: 0 6px 20px rgba(255, 211, 105, 0.4);
+  box-shadow: var(--btn-glow-hover);
+  filter: brightness(1.1);
 }
 
 .start-btn:active {
@@ -425,8 +428,8 @@ body {
 }
 
 .cancel-btn {
-  background: linear-gradient(135deg, #0062cc 0%, #002a80 100%);
-  color: #fff;
+  background: var(--btn-gradient);
+  color: #000;
   border: none;
   padding: 12px 32px;
   border-radius: 50px;
@@ -436,14 +439,14 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 4px 15px rgba(0, 98, 204, 0.4);
+  box-shadow: var(--btn-glow);
+  font-weight: 600;
 }
 
 .cancel-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 98, 204, 0.6);
-  color: #fff;
-  background: linear-gradient(135deg, #0062cc 0%, #003399 100%);
+  box-shadow: var(--btn-glow-hover);
+  filter: brightness(1.1);
 }
 
 .loading-spinner {
@@ -486,23 +489,23 @@ body {
   }
 }
 
-.match-container button {
+.match-container button:not(.cancel-btn) {
   padding: clamp(10px, 2vw, 15px) clamp(25px, 5vw, 35px);
   font-size: clamp(0.9rem, 3vw, 1.1rem);
-  background-color: #ff6b6b;
-  color: white;
+  background: var(--btn-gradient);
+  color: #000;
   border: none;
-  border-radius: 8px;
+  border-radius: 30px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--btn-glow);
 }
 
-.match-container button:hover {
+.match-container button:not(.cancel-btn):hover {
   transform: scale(1.05);
-  background-color: #ff5252;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--btn-glow-hover);
+  filter: brightness(1.1);
 }
 
 .match-container button:active {

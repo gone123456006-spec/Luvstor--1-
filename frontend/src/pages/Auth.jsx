@@ -257,20 +257,20 @@ const Auth = () => {
                     transition: all 0.3s;
                 }
                 .gender-selection button.active {
-                    background: #ffd369;
+                    border-color: var(--accent-yellow, #ffd369);
                     color: black;
-                    border-color: #ffd369;
                 }
                 .submit-btn {
-                    background: #ffd369;
+                    background: var(--btn-gradient, linear-gradient(135deg, #ffd369 0%, #ff9f00 100%));
                     color: black;
                     padding: 15px;
                     border-radius: 10px;
                     border: none;
                     font-weight: bold;
                     cursor: pointer;
-                    transition: transform 0.2s;
+                    transition: all 0.2s;
                     margin-top: 10px;
+                    box-shadow: 0 4px 15px rgba(255, 211, 105, 0.3);
                 }
                 .submit-btn:hover {
                     transform: translateY(-2px);
