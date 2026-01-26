@@ -148,13 +148,41 @@ const Chat = () => {
             setPartnerStatus('left');
             setMessages(prev => [
               ...prev, 
-              { system: true, message: 'Partner disconnected.' },
-              { system: true, message: 'Press Enter to find a new match...' }
+              { system: true, message: 'Partner left the chat.' }
             ]);
-            // Auto-focus input to allow Enter key to start new match
+            
+            // Show notification that partner left
+            showError(
+              'Partner Left',
+              'Your partner has left the chat. Finding a new match...',
+              'info'
+            );
+            
+            // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
-              inputRef.current?.focus();
-            }, 300);
+              // Clear all state
+              setMessages([]);
+              setPartnerStatus('online');
+              setIsPartnerTyping(false);
+              setInputValue('');
+              setShowEmojiPicker(false);
+              setError(null);
+              consecutiveFailuresRef.current = 0;
+              failedMessageRef.current = null;
+              
+              // Clear session storage
+              sessionStorage.removeItem('chat_messages');
+              sessionStorage.removeItem('chat_room');
+              
+              // Notify backend we're leaving
+              fetch(`${BACKEND_URL}/api/chat/leave`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              }).catch(() => {});
+              
+              // Navigate to match page
+              navigate('/match');
+            }, 2000);
           }
           return;
         }
