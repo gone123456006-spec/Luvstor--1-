@@ -105,8 +105,8 @@ textarea {
     align-items: center;
     gap: 12px;
     padding: calc(10px + var(--safe-area-inset-top)) 10px 10px 6px;
-    background: linear-gradient(135deg, #360167 0%, #561496 100%);
-    border-bottom: 2px solid rgba(255, 211, 105, 0.3);
+    background: linear-gradient(135deg, #4c2196 0%, #2e1163 100%);
+    border-bottom: none;
     flex-shrink: 0;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
