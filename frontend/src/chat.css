@@ -236,6 +236,27 @@ textarea {
     height: 14px;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ============ CHAT BODY ============ */
 .chat-body {
     flex: 1;
@@ -274,6 +295,10 @@ textarea {
     background: rgba(255, 211, 105, 0.5);
 }
 
+
+
+
+
 /* ============ MESSAGE BUBBLES ============ */
 .bubble {
     display: flex;
@@ -304,6 +329,13 @@ textarea {
         transform: translateY(0) scale(1);
     }
 }
+
+
+
+
+
+
+
 
 /* Own messages (You) - Vibrant Purple */
 .bubble.own {
@@ -422,158 +454,213 @@ textarea {
     }
 }
 
-/* ============ INPUT SECTION ============ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============ INPUT SECTION (REFINED) ============ */
 .chat-input {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
+
     display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    padding: 10px 16px;
-    padding-bottom: calc(10px + var(--safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(14, 8, 24, 0.98) 0%, rgba(10, 5, 15, 1) 100%);
+    align-items: center;
+    gap: 12px;
+
+    padding: 12px 14px;
+    padding-bottom: calc(12px + var(--safe-area-inset-bottom));
+
+    background: linear-gradient(180deg,
+            rgba(18, 10, 32, 0.98),
+            rgba(10, 5, 18, 1));
+
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-    min-height: 64px;
+    backdrop-filter: blur(14px);
+
+    min-height: 68px;
     z-index: 100;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
+
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
 }
 
-.chat-input.emoji-open {
-    padding-bottom: calc(8px + var(--safe-area-inset-bottom));
-}
-
+/* Emoji Button */
 .emoji-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border: none;
-    background: transparent;
+
     cursor: pointer;
-    border-radius: 50%;
     transition: all 0.2s ease;
-    flex-shrink: 0;
-    -webkit-user-select: none;
-    user-select: none;
-    min-width: 44px;
-    min-height: 44px;
+}
+
+.emoji-btn:hover {
+    background: rgba(255, 211, 105, 0.12);
 }
 
 .emoji-btn:active {
-    background: rgba(255, 211, 105, 0.15);
-    transform: scale(0.92);
+    transform: scale(0.9);
 }
 
+/* Input Field */
 .chat-input input {
     flex: 1;
-    min-width: 0;
-    padding: 11px 18px;
+    height: 46px;
+
+    padding: 0 18px;
+    border-radius: 26px;
+
     background: rgba(255, 255, 255, 0.08);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 24px;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+
     color: #fff;
-    font-size: 16px;
-    outline: none;
-    transition: all 0.3s ease;
-    font-family: inherit;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 44px;
-    backdrop-filter: blur(8px);
-    line-height: 1.4;
+    font-size: 15px;
+    font-weight: 500;
+
+    transition: all 0.25s ease;
+    backdrop-filter: blur(10px);
 }
 
 .chat-input input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: 500;
-    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .chat-input input:focus {
-    border-color: #ffd369;
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 0 4px rgba(255, 211, 105, 0.2), inset 0 0 16px rgba(255, 211, 105, 0.1);
+    box-shadow:
+        0 0 0 4px rgba(255, 211, 105, 0.15),
+        inset 0 0 12px rgba(255, 211, 105, 0.08);
 }
 
 .chat-input input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: var(--bg-light);
 }
 
+/* Send Button (Premium) */
 .send-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+
+    border-radius: 50%;
+    border: none;
+
+    background: linear-gradient(135deg,
+            #ffd369,
+            #ffb700);
+
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 50px;
-    height: 50px;
-    border: none;
-    background-color: var(--accent-yellow);
-    color: #000;
-    border-radius: 50%;
+
     cursor: pointer;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    font-size: 20px;
-    font-weight: bold;
-    min-width: 50px;
-    min-height: 50px;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-appearance: none;
-    appearance: none;
+    transition: all 0.25s ease;
+
+    box-shadow:
+        0 4px 14px rgba(255, 211, 105, 0.45);
 }
 
-.send-btn svg {
-    position: relative;
-    z-index: 2;
-    width: 20px;
-    height: 20px;
+.send-btn svg,
+.send-btn img {
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
 
 .send-btn:hover:not(:disabled) {
-    background: #ffbf00;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 20px rgba(255, 211, 105, 0.65);
 }
 
 .send-btn:active:not(:disabled) {
-    transform: scale(0.9);
-    background: #ffb700;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    transform: scale(0.92);
 }
 
 .send-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
-/* ============ EMOJI PICKER ============ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============ EMOJI PICKER (REFINED) ============ */
 .emoji-popup {
     position: fixed;
-    bottom: 64px;
     left: 0;
     right: 0;
-    height: 300px;
-    background: rgba(26, 15, 43, 0.99);
-    border-top: 2px solid rgba(255, 211, 105, 0.2);
+
+    /* Dynamic height for mobile */
+    height: min(320px, 45vh);
+
+    bottom: calc(68px + var(--safe-area-inset-bottom));
+    background: linear-gradient(180deg,
+            rgba(28, 16, 48, 0.98),
+            rgba(16, 8, 28, 1));
+
+    border-top: 1.5px solid rgba(255, 211, 105, 0.25);
+    border-radius: 22px 22px 0 0;
+
     z-index: 1000;
-    border-radius: 24px 24px 0 0;
     overflow: hidden;
-    animation: slide-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-    bottom: calc(64px + var(--safe-area-inset-bottom));
-    backdrop-filter: blur(12px);
+
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+
+    animation: emoji-slide-up 0.32s cubic-bezier(0.25, 1.4, 0.4, 1);
 }
 
-@keyframes slide-up {
+/* Slide animation */
+@keyframes emoji-slide-up {
     from {
         transform: translateY(100%);
         opacity: 0;
@@ -585,63 +672,98 @@ textarea {
     }
 }
 
+/* Drag Handle */
 .emoji-popup::before {
     content: '';
     position: absolute;
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 44px;
+
+    width: 42px;
     height: 5px;
-    background: rgba(255, 211, 105, 0.3);
     border-radius: 3px;
-    z-index: 10;
+
+    background: rgba(255, 211, 105, 0.35);
 }
 
+/* Scrollbar */
 .emoji-popup ::-webkit-scrollbar {
-    width: 8px;
-}
-
-.emoji-popup ::-webkit-scrollbar-track {
-    background: transparent;
+    width: 6px;
 }
 
 .emoji-popup ::-webkit-scrollbar-thumb {
-    background: rgba(255, 211, 105, 0.3);
+    background: rgba(255, 211, 105, 0.35);
     border-radius: 4px;
 }
 
 .emoji-popup ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 211, 105, 0.5);
+    background: rgba(255, 211, 105, 0.6);
 }
 
-/* Style emoji picker internal elements */
+/* ===== Emoji Picker Internal Styling ===== */
 .emoji-popup [class*="picker"] {
-    background: rgba(26, 15, 43, 0.99) !important;
+    background: transparent !important;
     border: none !important;
 }
 
 .emoji-popup [class*="scroll"] {
-    background: rgba(26, 15, 43, 0.99) !important;
-}
-
-.emoji-popup [class*="category"] {
     background: transparent !important;
 }
 
+.emoji-popup [class*="category"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-radius: 12px;
+    margin: 4px;
+}
+
+/* Emoji Item */
 .emoji-popup [class*="emoji"] {
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.18s ease, filter 0.18s ease;
 }
 
+/* Hover (desktop) */
 .emoji-popup [class*="emoji"]:hover {
     transform: scale(1.25);
-    filter: brightness(1.2);
+    filter: brightness(1.25);
 }
 
+/* Active (mobile tap) */
 .emoji-popup [class*="emoji"]:active {
-    transform: scale(0.9);
+    transform: scale(0.92);
 }
+
+/* ===== MOBILE OPTIMIZATION ===== */
+@media (max-width: 480px) {
+    .emoji-popup {
+        height: min(260px, 42vh);
+        border-radius: 18px 18px 0 0;
+    }
+
+    .emoji-popup::before {
+        width: 36px;
+        height: 4px;
+    }
+}
+
+/* Landscape Mode */
+@media (max-height: 500px) {
+    .emoji-popup {
+        height: 180px;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 /* ============ RESPONSIVE ============ */
 /* Small Phones (320px - 360px) */
