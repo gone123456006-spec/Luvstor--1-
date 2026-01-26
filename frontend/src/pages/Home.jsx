@@ -34,7 +34,7 @@ const Home = () => {
 
         <h1>
           Meet New People <br />
-          <span>Randomly. Instantly.</span>
+          <span>Anonymous.</span>
         </h1>
 
         <p>
