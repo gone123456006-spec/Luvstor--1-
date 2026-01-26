@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCircle2, Zap, Shield, MessageCircle } from 'lucide-react';
+import { UserCircle2, Zap, Shield, MessageCircle, Instagram, Send } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const Home = () => {
@@ -31,16 +31,18 @@ const Home = () => {
 
       <div className="home-content">
         <img src={logo} alt="Luvstor Logo" className="logo" />
-
+        <br />
         <h1>
-          Meet New People <br />
-          <span>Anonymous.</span>
+          Meet New People
+          <span>Anonymously</span>
         </h1>
 
         <p>
-          Start anonymous conversations with real people from around the world.
+          Start anonymous conversations with
           <br />
-          No sign-up. No record. Just chat.
+          real people from around the world.
+          <br />
+          <strong>No sign-up. Just chat.</strong>
         </p>
 
         <button className="start-btn" onClick={handleStartChat}>
@@ -64,6 +66,14 @@ const Home = () => {
       </div>
 
       <div className="brand-footer">
+        <div className="social-links">
+          <a href="https://www.instagram.com/luvstor.app?igsh=MW4wNHF2cDV3ZG03aw==-link" target="_blank" rel="noopener noreferrer" className="social-link">
+            <Instagram size={20} />
+          </a>
+          <a href="https://t.me/Luvstorapp" target="_blank" rel="noopener noreferrer" className="social-link">
+            <Send size={20} />
+          </a>
+        </div>
         By Brandoverts
       </div>
     </div>
