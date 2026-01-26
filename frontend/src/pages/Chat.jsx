@@ -58,15 +58,6 @@ const Chat = () => {
     };
   }, [token, BACKEND_URL]);
 
-  // Get user initials for avatar
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   useEffect(() => {
     if (!roomId) {
@@ -260,24 +251,21 @@ const Chat = () => {
     <div className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''}`}>
       {/* HEADER */}
       <div className="chat-header">
-        <div className="header-left">
-          <div className="partner-avatar">
-            {getInitials(partnerUsername)}
-          </div>
-          <div className="stranger-details">
-            <h4>{partnerUsername}</h4>
-            <span className={`status ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
-              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
-            </span>
-          </div>
-        </div>
-
         <div className="chat-logo-container">
           {logo ? (
             <img src={logo} alt="Luvstor" className="chat-logo" />
           ) : (
             <div className="chat-logo">LV</div>
           )}
+        </div>
+
+        <div className="header-center">
+          <div className="stranger-details">
+            <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
+              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
+            </span>
+            <h4>{partnerUsername}</h4>
+          </div>
         </div>
 
         <button className="next-btn" onClick={handleNext}>

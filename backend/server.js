@@ -41,6 +41,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
 
+// Keep-alive endpoint
+app.get('/api/keep-alive', (req, res) => {
+  res.json({ status: 'staying alive', timestamp: new Date() });
+});
+
+// Internal self-ping to prevent idle spin-down (every 30 seconds)
+setInterval(() => {
+  const url = `http://localhost:${process.env.PORT || 5000}/api/keep-alive`;
+  http.get(url, (res) => {
+    // Just consume the response
+  }).on('error', (err) => {
+    // Ignore errors during self-ping
+  });
+}, 30000);
+
 // API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
