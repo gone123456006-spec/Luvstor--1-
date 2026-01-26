@@ -251,6 +251,15 @@ const Chat = () => {
     <div className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''}`}>
       {/* HEADER */}
       <div className="chat-header">
+        <div className="header-left">
+          <div className="stranger-details">
+            <h4>{partnerUsername}</h4>
+            <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
+              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
+            </span>
+          </div>
+        </div>
+
         <div className="chat-logo-container">
           {logo ? (
             <img src={logo} alt="Luvstor" className="chat-logo" />
@@ -259,19 +268,12 @@ const Chat = () => {
           )}
         </div>
 
-        <div className="header-center">
-          <div className="stranger-details">
-            <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
-              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
-            </span>
-            <h4>{partnerUsername}</h4>
-          </div>
+        <div className="header-right">
+          <button className="next-btn" onClick={handleNext}>
+            <LogOut size={16} />
+            Next
+          </button>
         </div>
-
-        <button className="next-btn" onClick={handleNext}>
-          <LogOut size={16} />
-          Next
-        </button>
       </div>
 
       {/* MESSAGES */}
