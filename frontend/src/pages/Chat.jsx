@@ -30,13 +30,11 @@ const Chat = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Clear any persisted messages from previous sessions
     const clearPreviousSession = () => {
       sessionStorage.removeItem('chat_messages');
       sessionStorage.removeItem('chat_room');
     };
 
-    // Handle page refresh/close - clear messages and disconnect
     const handlePageUnload = async () => {
       try {
         await fetch(`${BACKEND_URL}/api/chat/leave`, {
@@ -47,17 +45,13 @@ const Chat = () => {
       clearPreviousSession();
     };
 
-    // Clear on mount to ensure fresh start
     clearPreviousSession();
-
-    // Handle browser back/refresh
     window.addEventListener('beforeunload', handlePageUnload);
 
     return () => {
       window.removeEventListener('beforeunload', handlePageUnload);
     };
   }, [token, BACKEND_URL]);
-
 
   useEffect(() => {
     if (!roomId) {
@@ -127,20 +121,13 @@ const Chat = () => {
 
     const intervalId = setInterval(fetchUpdates, 1000);
 
-    // Cleanup: Clear messages and disconnect when component unmounts
     return () => {
       clearInterval(intervalId);
-
-      // Clear messages and reset state on unmount
       setMessages([]);
       setPartnerStatus('online');
       setIsPartnerTyping(false);
-
-      // Clear session storage
       sessionStorage.removeItem('chat_messages');
       sessionStorage.removeItem('chat_room');
-
-      // Notify backend of disconnect
       fetch(`${BACKEND_URL}/api/chat/leave`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -159,11 +146,10 @@ const Chat = () => {
   }, []);
 
   const toggleEmojiPicker = () => {
-    setShowEmojiPicker((prev) => !prev);
+    setShowEmojiPicker(prev => !prev);
   };
 
   useEffect(() => {
-    // Auto-scroll to latest message
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -193,16 +179,13 @@ const Chat = () => {
     const messageData = {
       sender: myUsername,
       message: messageContent,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       seen: false,
       isOwn: true,
       _id: 'temp-' + Date.now()
     };
 
-    setMessages((prev) => [...prev, messageData]);
+    setMessages(prev => [...prev, messageData]);
     setInputValue('');
     setShowEmojiPicker(false);
 
@@ -215,14 +198,13 @@ const Chat = () => {
         },
         body: JSON.stringify({ roomId, message: messageContent })
       });
-
     } catch (error) {
       console.error('Send message error:', error);
     }
   };
 
   const onEmojiClick = (emojiData) => {
-    setInputValue((prev) => prev + emojiData.emoji);
+    setInputValue(prev => prev + emojiData.emoji);
   };
 
   const handleNext = async () => {
@@ -233,14 +215,12 @@ const Chat = () => {
       });
     } catch (e) { }
 
-    // Clear all messages and state
     setMessages([]);
     setPartnerStatus('online');
     setIsPartnerTyping(false);
     setInputValue('');
     setShowEmojiPicker(false);
 
-    // Clear session storage
     sessionStorage.removeItem('chat_messages');
     sessionStorage.removeItem('chat_room');
 
@@ -279,10 +259,7 @@ const Chat = () => {
       {/* MESSAGES */}
       <div className="chat-body" ref={chatBodyRef}>
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'}`}
-          >
+          <div key={idx} className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'}`}>
             <p>{msg.message}</p>
             {!msg.system && (
               <span>
@@ -294,10 +271,13 @@ const Chat = () => {
         ))}
 
         {isPartnerTyping && (
-          <div className="typing-bubble">
-            <span></span>
-            <span></span>
-            <span></span>
+          <div className="typing-indicator">
+            <span className="typing-text">Stranger is typing</span>
+            <div className="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
         )}
 
@@ -305,50 +285,32 @@ const Chat = () => {
       </div>
 
       {/* INPUT */}
-      <div className={`chat-input ${showEmojiPicker ? 'emoji-open' : ''}`} style={{ pointerEvents: partnerStatus === 'left' ? 'none' : 'auto', opacity: partnerStatus === 'left' ? 0.5 : 1 }}>
-        <button
-          className="emoji-btn"
-          onClick={toggleEmojiPicker}
-          type="button"
-        >
+      <div className={`chat-input ${showEmojiPicker ? 'emoji-open' : ''}`}>
+        <button className="emoji-btn" onClick={toggleEmojiPicker} type="button">
           <Smile size={24} color="#ffd369" />
         </button>
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Partner disconnected" : "Chat on luvstor..."}
+          placeholder={partnerStatus === 'left' ? 'Partner disconnected' : 'Chat on luvstor...'}
           value={inputValue}
           onChange={handleTyping}
-          onFocus={(e) => {
-            setShowEmojiPicker(false);
-            // Prevent auto-scroll by temporarily disabling smooth scroll
-            e.target.scrollIntoView({ behavior: 'auto', block: 'end' });
-          }}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           disabled={partnerStatus === 'left'}
         />
 
-        <button
-          onClick={sendMessage}
-          className="send-btn"
-          disabled={partnerStatus === 'left'}
-          type="button"
-        >
-          <Send size={20} />
+        <button onClick={sendMessage} className="send-btn" disabled={partnerStatus === 'left'} type="button">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/724/724954.png"
+            alt="Send"
+            className="send-icon"
+          />
         </button>
       </div>
 
       {showEmojiPicker && (
         <div className="emoji-popup" ref={emojiPickerRef}>
-          <EmojiPicker
-            onEmojiClick={onEmojiClick}
-            theme="light"
-            width="100%"
-            height="100%"
-            previewConfig={{ showPreview: false }}
-            searchDisabled
-            skinTonesDisabled
-          />
+          <EmojiPicker onEmojiClick={onEmojiClick} />
         </div>
       )}
     </div>
