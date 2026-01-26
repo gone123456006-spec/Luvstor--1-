@@ -62,6 +62,10 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      <div className="brand-footer">
+        By Brandoverts
+      </div>
     </div>
   );
 };
