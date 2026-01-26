@@ -134,13 +134,12 @@ textarea {
 }
 
 .chat-logo {
-    height: 18px;
+    height: 15px;
     /* Very small */
     width: auto;
     margin: 0;
     border-radius: 0;
     object-fit: contain;
-    filter: drop-shadow(0 0 8px rgba(255, 211, 105, 0.4));
 }
 
 @keyframes logoGlow {
@@ -165,7 +164,7 @@ textarea {
 }
 
 .status-top {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -187,7 +186,7 @@ textarea {
 /* Pulse animation removed for cleaner look, or keep if desired */
 
 .stranger-details h4 {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: #ffffff;
@@ -214,7 +213,6 @@ textarea {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
     flex-shrink: 0;
     min-height: 32px;
 }
@@ -307,92 +305,51 @@ textarea {
     }
 }
 
-/* Own messages */
+/* Own messages (You) - Metallic Purple */
 .bubble.own {
     align-self: flex-end;
-    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-    color: white;
-    border-bottom-right-radius: 8px;
-    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-    margin-right: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    position: relative;
-}
-
-.bubble.own::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 18px;
-    border-bottom-right-radius: 8px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
-    pointer-events: none;
+    background: linear-gradient(135deg, #4c2196 0%, #2e1163 100%);
+    color: #ffffff;
+    border-radius: 18px 18px 4px 18px;
+    margin-right: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble.own p {
-    font-size: 15px;
     margin: 0;
-    font-weight: 500;
-    position: relative;
-    z-index: 1;
+    font-weight: 400;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .bubble.own span {
-    font-size: 11px;
-    opacity: 0.9;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.5);
     align-self: flex-end;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    -webkit-user-select: none;
-    user-select: none;
-    color: rgba(255, 255, 255, 0.8);
-    position: relative;
-    z-index: 1;
+    margin-top: 2px;
 }
 
-/* Other messages */
+/* Other messages (Stranger) - Dark Glassmorphic */
 .bubble.other {
     align-self: flex-start;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    color: var(--text-primary);
-    border-bottom-left-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-left: 3px solid rgba(255, 211, 105, 0.6);
-    margin-left: 4px;
-    position: relative;
-    overflow: hidden;
-}
-
-.bubble.other::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 18px;
-    border-bottom-left-radius: 8px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
-    pointer-events: none;
+    background-color: rgba(43, 45, 62, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
+    border-radius: 18px 18px 18px 4px;
+    margin-left: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bubble.other p {
-    font-size: 15px;
     margin: 0;
-    font-weight: 500;
-    position: relative;
-    z-index: 1;
+    font-weight: 400;
 }
 
 .bubble.other span {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    align-items: center;
-    -webkit-user-select: none;
-    user-select: none;
-    position: relative;
-    z-index: 1;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    align-self: flex-start;
+    margin-top: 2px;
 }
 
 /* System messages */

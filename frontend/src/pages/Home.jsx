@@ -34,11 +34,14 @@ const Home = () => {
 
         <h1>
           Meet New People <br />
-          <span>Anonymous.</span>
+
+          <span>Anonymously</span>
         </h1>
 
         <p>
-          Start anonymous conversations with real people from around the world.
+          Start anonymous conversations with
+          <br />
+          real people from around the world.
           <br />
           No sign-up. No record. Just chat.
         </p>
