@@ -26,6 +26,9 @@ body {
     user-select: none;
     -webkit-touch-callout: none;
     position: fixed;
+    /* Prevent layout shift on mobile keyboard */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 :root {
@@ -85,6 +88,7 @@ textarea {
     width: 100%;
     height: 100vh;
     height: 100dvh;
+    min-height: -webkit-fill-available;
     background: linear-gradient(rgba(26, 1, 54, 0.82), rgba(13, 0, 26, 0.86)), url("./assets/chat-bg.jpg") center center repeat;
     background-size: 360px auto;
     background-attachment: fixed;
@@ -96,6 +100,14 @@ textarea {
     right: 0;
     bottom: 0;
     z-index: 999;
+    /* Better mobile keyboard handling */
+    touch-action: pan-y;
+}
+
+/* Adjust container when keyboard is open */
+.chat-container.keyboard-open {
+    height: 100vh;
+    height: 100dvh;
 }
 
 /* ============ HEADER ============ */
@@ -111,9 +123,15 @@ textarea {
     flex-shrink: 0;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
+    z-index: 1000;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     min-height: 60px;
+    /* Make header sticky at the top */
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
 }
 
 .header-left {
@@ -205,8 +223,8 @@ textarea {
     justify-content: center;
     gap: 6px;
     padding: 8px 20px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: #fff;
+    background: linear-gradient(135deg, #ffd369 0%, #ffbf00 100%);
+    color: #000;
     border: none;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -215,14 +233,15 @@ textarea {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 211, 105, 0.4);
     flex-shrink: 0;
     min-height: 32px;
 }
 
 .next-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(79, 172, 254, 0.6);
+    box-shadow: 0 6px 16px rgba(255, 211, 105, 0.6);
+    background: linear-gradient(135deg, #ffbf00 0%, #ff9f00 100%);
 }
 
 .next-btn:active {
@@ -254,10 +273,15 @@ textarea {
     overscroll-behavior: contain;
     position: relative;
     min-height: 0;
+    /* Better mobile scrolling */
+    touch-action: pan-y;
+    will-change: scroll-position;
 }
 
 .chat-body.keyboard-open {
     scroll-behavior: auto;
+    /* Adjust padding when keyboard is open */
+    padding-bottom: calc(80px + env(keyboard-inset-height, 0px));
 }
 
 .chat-body::-webkit-scrollbar {
@@ -468,6 +492,15 @@ textarea {
     }
 }
 
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ============ INPUT SECTION ============ */
 .chat-input {
     position: fixed;
@@ -482,11 +515,33 @@ textarea {
     background: linear-gradient(180deg, rgba(26, 15, 43, 0.98) 0%, rgba(26, 15, 43, 1) 100%);
     border-top: 2px solid rgba(255, 211, 105, 0.2);
     flex-shrink: 0;
-    transition: all 0.3s ease;
+    transition: transform 0.25s ease-out, padding-bottom 0.25s ease-out;
     min-height: 64px;
     z-index: 100;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
+    /* Ensure input stays above keyboard */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+/* When keyboard is open, ensure input is visible */
+.chat-container.keyboard-open .chat-input {
+    position: fixed;
+    bottom: 0;
+    /* Use env() for keyboard height if supported */
+    padding-bottom: calc(14px + var(--safe-area-inset-bottom));
+}
+
+/* Mobile-specific adjustments */
+@supports (height: 100dvh) {
+    .chat-container {
+        height: 100dvh;
+    }
+    
+    .chat-container.keyboard-open {
+        height: 100dvh;
+    }
 }
 
 .chat-input.emoji-open {
@@ -902,5 +957,171 @@ textarea {
 
     .chat-input {
         padding-bottom: max(14px, var(--safe-area-inset-bottom));
+    }
+}
+
+/* iOS Safari keyboard fixes */
+@supports (-webkit-touch-callout: none) {
+    .chat-container {
+        /* Use -webkit-fill-available for better iOS support */
+        height: -webkit-fill-available;
+    }
+    
+    .chat-input {
+        /* Ensure input stays visible on iOS */
+        position: fixed;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+    
+    /* Prevent iOS bounce scrolling issues */
+    .chat-body {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+    }
+}
+
+/* Additional mobile keyboard handling */
+@media (max-width: 768px) {
+    .chat-input input {
+        /* Prevent zoom on iOS when focusing input */
+        font-size: 16px !important;
+    }
+    
+    /* Ensure input container adapts to keyboard */
+    .chat-container.keyboard-open .chat-input {
+        position: fixed;
+        bottom: 0;
+        /* Account for virtual keyboard */
+        transform: translateY(0);
+    }
+    
+    /* Adjust chat body padding when keyboard is open */
+    .chat-container.keyboard-open .chat-body {
+        padding-bottom: calc(100px + env(keyboard-inset-height, 0px));
+    }
+}
+
+/* ============ ERROR NOTIFICATION ============ */
+.error-notification {
+    position: fixed;
+    top: calc(70px + var(--safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 90%;
+    min-width: 280px;
+    animation: slideDown 0.3s ease-out;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.error-notification.warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+}
+
+.error-notification.info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.error-notification-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.error-notification-title {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.error-notification-message {
+    font-size: 12px;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+.error-notification-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+}
+
+.error-notification-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.error-notification-retry {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 4px;
+    align-self: flex-start;
+}
+
+.error-notification-retry:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.error-notification-retry:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+    .error-notification {
+        top: calc(60px + var(--safe-area-inset-top));
+        max-width: 95%;
+        min-width: auto;
+        padding: 10px 16px;
+    }
+    
+    .error-notification-title {
+        font-size: 13px;
+    }
+    
+    .error-notification-message {
+        font-size: 11px;
     }
 }
