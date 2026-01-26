@@ -34,12 +34,13 @@ const Home = () => {
 
         <h1>
           Meet New People <br />
-          <span>Randomly. Instantly.</span>
+          <span>Anonymous.</span>
         </h1>
 
         <p>
           Start anonymous conversations with real people from around the world.
-          No sign-up. No pressure. Just chat.
+          <br />
+          No sign-up. No record. Just chat.
         </p>
 
         <button className="start-btn" onClick={handleStartChat}>
