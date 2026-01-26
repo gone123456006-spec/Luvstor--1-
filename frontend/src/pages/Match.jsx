@@ -19,7 +19,7 @@ const Match = () => {
       return;
     }
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
 
     let intervalId;
 
@@ -83,7 +83,7 @@ const Match = () => {
   const handleCancel = async () => {
     try {
       const token = localStorage.getItem('token');
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
       await fetch(`${BACKEND_URL}/api/chat/leave`, {
         method: 'POST',
         headers: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
-import { Smile, Send, LogOut } from 'lucide-react';
+import { Smile, LogOut, Send } from 'lucide-react';
 import logo from '../assets/logo.png';
 import '../chat.css';
 
@@ -18,14 +18,46 @@ const Chat = () => {
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const lastUpdateRef = useRef(null); // Timestamp of last update to fetch new messages
+  const lastUpdateRef = useRef(null);
+  const inputRef = useRef(null);
+  const chatBodyRef = useRef(null);
 
   const roomId = location.state?.roomId;
   const partnerUsername = location.state?.partnerUsername || 'Stranger';
   const myUsername = 'You';
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    // Clear any persisted messages from previous sessions
+    const clearPreviousSession = () => {
+      sessionStorage.removeItem('chat_messages');
+      sessionStorage.removeItem('chat_room');
+    };
+
+    // Handle page refresh/close - clear messages and disconnect
+    const handlePageUnload = async () => {
+      try {
+        await fetch(`${BACKEND_URL}/api/chat/leave`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (e) { }
+      clearPreviousSession();
+    };
+
+    // Clear on mount to ensure fresh start
+    clearPreviousSession();
+
+    // Handle browser back/refresh
+    window.addEventListener('beforeunload', handlePageUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handlePageUnload);
+    };
+  }, [token, BACKEND_URL]);
+
 
   useEffect(() => {
     if (!roomId) {
@@ -33,7 +65,6 @@ const Chat = () => {
       return;
     }
 
-    // Initial load
     lastUpdateRef.current = new Date(0).toISOString();
 
     const fetchUpdates = async () => {
@@ -54,17 +85,11 @@ const Chat = () => {
           return;
         }
 
-        // Processing messages
         if (data.messages && data.messages.length > 0) {
-          // Update timestamp to the last message's time
-          const validMessages = data.messages.filter(m => m.sender !== JSON.parse(localStorage.getItem('user'))._id);
-
-          // LOGGING FOR DEBUGGING
           const valUser = localStorage.getItem('user');
           if (!valUser) return;
 
           const userObj = JSON.parse(valUser);
-          // authController returns { id, username ... }, not _id at root of object
           const myUserId = userObj.id || userObj._id;
 
           const newPartnerMessages = data.messages.filter(msg => {
@@ -75,23 +100,20 @@ const Chat = () => {
           if (newPartnerMessages.length > 0) {
             const formattedMsgs = newPartnerMessages.map(msg => ({
               message: msg.content,
-              sender: partnerUsername, // Or msg.sender
+              sender: partnerUsername,
               timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isOwn: false,
-              seen: true, // Auto-mark as seen for now
+              seen: true,
               _id: msg._id
             }));
 
             setMessages(prev => {
-              // Dedup based on ID if necessary (though timestamp filter should handle it)
               const existingIds = new Set(prev.map(p => p._id));
               const uniqueNew = formattedMsgs.filter(m => !existingIds.has(m._id));
               return [...prev, ...uniqueNew];
             });
           }
 
-          // Update time reference to the very last message in the batch (regardless of sender)
-          // to fetch only newer ones next time.
           const lastMsg = data.messages[data.messages.length - 1];
           lastUpdateRef.current = lastMsg.createdAt;
         }
@@ -103,13 +125,29 @@ const Chat = () => {
       }
     };
 
-    // Poll every 1 second
     const intervalId = setInterval(fetchUpdates, 1000);
 
-    return () => clearInterval(intervalId);
+    // Cleanup: Clear messages and disconnect when component unmounts
+    return () => {
+      clearInterval(intervalId);
+
+      // Clear messages and reset state on unmount
+      setMessages([]);
+      setPartnerStatus('online');
+      setIsPartnerTyping(false);
+
+      // Clear session storage
+      sessionStorage.removeItem('chat_messages');
+      sessionStorage.removeItem('chat_room');
+
+      // Notify backend of disconnect
+      fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => { });
+    };
   }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
 
-  /* ---------------- Emoji Toggle Logic ---------------- */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target) && !event.target.closest('.emoji-btn')) {
@@ -124,18 +162,17 @@ const Chat = () => {
     setShowEmojiPicker((prev) => !prev);
   };
 
-  /* ---------------- Auto Scroll ---------------- */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Auto-scroll to latest message
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   }, [messages, isPartnerTyping]);
 
-  /* ---------------- Typing Logic ---------------- */
   const handleTyping = async (e) => {
     setInputValue(e.target.value);
 
-    // Rate limit typing updates
     if (!typingTimeoutRef.current) {
-      // Send typing indicator
       try {
         await fetch(`${BACKEND_URL}/api/chat/typing`, {
           method: 'POST',
@@ -145,11 +182,10 @@ const Chat = () => {
 
       typingTimeoutRef.current = setTimeout(() => {
         typingTimeoutRef.current = null;
-      }, 2000); // Only send once every 2 seconds
+      }, 2000);
     }
   };
 
-  /* ---------------- Send Message ---------------- */
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -163,10 +199,9 @@ const Chat = () => {
       }),
       seen: false,
       isOwn: true,
-      _id: 'temp-' + Date.now() // Temporary ID
+      _id: 'temp-' + Date.now()
     };
 
-    // Optimistic UI update
     setMessages((prev) => [...prev, messageData]);
     setInputValue('');
     setShowEmojiPicker(false);
@@ -183,16 +218,13 @@ const Chat = () => {
 
     } catch (error) {
       console.error('Send message error:', error);
-      // Could mark message as failed in UI
     }
   };
 
-  /* ---------------- Emoji ---------------- */
   const onEmojiClick = (emojiData) => {
     setInputValue((prev) => prev + emojiData.emoji);
   };
 
-  /* ---------------- Next Stranger ---------------- */
   const handleNext = async () => {
     try {
       await fetch(`${BACKEND_URL}/api/chat/leave`, {
@@ -200,6 +232,18 @@ const Chat = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
     } catch (e) { }
+
+    // Clear all messages and state
+    setMessages([]);
+    setPartnerStatus('online');
+    setIsPartnerTyping(false);
+    setInputValue('');
+    setShowEmojiPicker(false);
+
+    // Clear session storage
+    sessionStorage.removeItem('chat_messages');
+    sessionStorage.removeItem('chat_room');
+
     navigate('/match');
   };
 
@@ -207,24 +251,31 @@ const Chat = () => {
     <div className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''}`}>
       {/* HEADER */}
       <div className="chat-header">
-        <div className="header-left">
-          <img src={logo} alt="Luvstor" className="chat-logo" />
+        <div className="chat-logo-container">
+          {logo ? (
+            <img src={logo} alt="Luvstor" className="chat-logo" />
+          ) : (
+            <div className="chat-logo">LV</div>
+          )}
+        </div>
+
+        <div className="header-center">
           <div className="stranger-details">
-            <h4>{partnerUsername}</h4>
-            <span className={`status ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
+            <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
               {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
             </span>
+            <h4>{partnerUsername}</h4>
           </div>
         </div>
 
         <button className="next-btn" onClick={handleNext}>
-          <LogOut size={16} style={{ marginRight: '6px' }} />
+          <LogOut size={16} />
           Next
         </button>
       </div>
 
       {/* MESSAGES */}
-      <div className="chat-body">
+      <div className="chat-body" ref={chatBodyRef}>
         {messages.map((msg, idx) => (
           <div
             key={idx}
@@ -252,10 +303,11 @@ const Chat = () => {
       </div>
 
       {/* INPUT */}
-      <div className="chat-input" style={{ pointerEvents: partnerStatus === 'left' ? 'none' : 'auto', opacity: partnerStatus === 'left' ? 0.5 : 1 }}>
+      <div className={`chat-input ${showEmojiPicker ? 'emoji-open' : ''}`} style={{ pointerEvents: partnerStatus === 'left' ? 'none' : 'auto', opacity: partnerStatus === 'left' ? 0.5 : 1 }}>
         <button
           className="emoji-btn"
           onClick={toggleEmojiPicker}
+          type="button"
         >
           <Smile size={24} color="#ffd369" />
         </button>
@@ -265,12 +317,21 @@ const Chat = () => {
           placeholder={partnerStatus === 'left' ? "Partner disconnected" : "Chat on luvstor..."}
           value={inputValue}
           onChange={handleTyping}
-          onFocus={() => setShowEmojiPicker(false)}
+          onFocus={(e) => {
+            setShowEmojiPicker(false);
+            // Prevent auto-scroll by temporarily disabling smooth scroll
+            e.target.scrollIntoView({ behavior: 'auto', block: 'end' });
+          }}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           disabled={partnerStatus === 'left'}
         />
 
-        <button onClick={sendMessage} className="send-btn" disabled={partnerStatus === 'left'}>
+        <button
+          onClick={sendMessage}
+          className="send-btn"
+          disabled={partnerStatus === 'left'}
+          type="button"
+        >
           <Send size={20} />
         </button>
       </div>
@@ -279,35 +340,15 @@ const Chat = () => {
         <div className="emoji-popup" ref={emojiPickerRef}>
           <EmojiPicker
             onEmojiClick={onEmojiClick}
-            theme="dark"
-            width={320}
-            height={300}
+            theme="light"
+            width="100%"
+            height="100%"
             previewConfig={{ showPreview: false }}
             searchDisabled
             skinTonesDisabled
           />
         </div>
       )}
-
-      <style>{`
-        .chat-container.full-screen {
-            max-width: 100% !important;
-            width: 100vw;
-            height: 100vh;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;
-        }
-        .bubble.system {
-            align-self: center;
-            background: rgba(0,0,0,0.3);
-            font-size: 0.8rem;
-            max-width: 100%;
-        }
-      `}</style>
     </div>
   );
 };
