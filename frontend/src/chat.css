@@ -69,6 +69,12 @@ input[type="text"],
 input[type="email"],
 textarea {
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    outline: none;
+    border: none;
+    background: transparent;
+    color: inherit;
     font-size: 16px;
 }
 

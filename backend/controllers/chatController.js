@@ -3,7 +3,10 @@ const Message = require('../models/Message');
 
 // Helper to update user activity
 const updateActivity = async (userId) => {
-    await User.findByIdAndUpdate(userId, { isActive: true });
+    await User.findByIdAndUpdate(userId, {
+        isActive: true,
+        updatedAt: new Date() // Force updatedAt refresh
+    });
 };
 
 // @desc    Join the matching queue
@@ -20,11 +23,13 @@ exports.joinQueue = async (req, res) => {
                 status: 'searching',
                 preference: preference || 'both',
                 isActive: true,
-                lastTyping: null // Reset typing status
+                lastTyping: null,
+                roomId: null // Ensure roomId is cleared when joining queue
             },
             { new: true }
         );
 
+        console.log(`[Queue] User ${user.username} (${user._id}) joined queue with preference ${user.preference}`);
         res.json({ status: 'searching', message: 'Joined queue' });
     } catch (error) {
         console.error('Join queue error:', error);
@@ -36,6 +41,7 @@ exports.joinQueue = async (req, res) => {
 // @route   GET /api/chat/queue/status
 // @access  Private
 exports.checkMatch = async (req, res) => {
+    console.log(`[CheckMatch] Entry for user ${req.user?._id}`);
     try {
         const user = await User.findById(req.user.id);
 
@@ -62,30 +68,37 @@ exports.checkMatch = async (req, res) => {
 
         // If still searching, try to find a match
         if (user.status === 'searching') {
-            // Simple match query - find ANY other user who is searching
-            // In a real app, you'd filter by preference
+            // Log status for debugging
+            const searchingCount = await User.countDocuments({ status: 'searching', _id: { $ne: user._id } });
+            console.log(`[Match] User ${user.username} is searching. Other searchers: ${searchingCount}`);
+
             const query = {
                 _id: { $ne: user._id },
                 status: 'searching',
-                // Ensure they have been active recently (e.g., last 10 seconds) to avoid matching with dead sessions
-                updatedAt: { $gt: new Date(Date.now() - 10000) }
+                // Increase tolerance slightly for dev/testing if needed, or keep 10s
+                updatedAt: { $gt: new Date(Date.now() - 30000) } // Increased to 30s for better stability
             };
 
-            let match = await User.findOne(query);
+            // Atomic match - find someone searching and mark them as chatting in one step
+            let match = await User.findOneAndUpdate(
+                query,
+                { status: 'chatting' }, // Will set roomId below after generating it
+                { new: true }
+            );
 
             if (match) {
-                // Match found!
+                // Match found and claimed!
                 const roomId = [user._id.toString(), match._id.toString()].sort().join('-');
+                console.log(`[Match] ATOMIC MATCH FOUND: ${user.username} + ${match.username} -> Room ${roomId}`);
 
-                // Update both users
+                // Now set the roomId for both
                 await User.findByIdAndUpdate(user._id, {
                     status: 'chatting',
                     roomId: roomId
                 });
 
                 await User.findByIdAndUpdate(match._id, {
-                    status: 'chatting',
-                    roomId: roomId
+                    roomId: roomId // already status: chatting
                 });
 
                 return res.json({
@@ -94,6 +107,8 @@ exports.checkMatch = async (req, res) => {
                     partnerId: match._id,
                     partnerUsername: match.username
                 });
+            } else {
+                console.log(`[Match] No suitable partner found for ${user.username} yet.`);
             }
         }
 
@@ -148,6 +163,7 @@ exports.sendMessage = async (req, res) => {
 // @route   GET /api/chat/updates
 // @access  Private
 exports.pollUpdates = async (req, res) => {
+    console.log(`[Poll] Entry for room ${req.query.roomId} user ${req.user?._id}`);
     try {
         const { roomId, since } = req.query; // since = timestamp or message ID
 
