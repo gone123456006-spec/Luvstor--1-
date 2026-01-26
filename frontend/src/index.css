@@ -425,7 +425,7 @@ body {
 }
 
 .cancel-btn {
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+  background: linear-gradient(135deg, #0062cc 0%, #002a80 100%);
   color: #fff;
   border: none;
   padding: 12px 32px;
@@ -436,13 +436,14 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 98, 204, 0.4);
 }
 
 .cancel-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+  box-shadow: 0 6px 20px rgba(0, 98, 204, 0.6);
   color: #fff;
+  background: linear-gradient(135deg, #0062cc 0%, #003399 100%);
 }
 
 .loading-spinner {

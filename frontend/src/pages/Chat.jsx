@@ -272,7 +272,7 @@ const Chat = () => {
 
         {isPartnerTyping && (
           <div className="typing-indicator">
-            <span className="typing-text">Stranger is typing</span>
+            <span className="typing-text">Typing</span>
             <div className="typing-dots">
               <span></span>
               <span></span>
