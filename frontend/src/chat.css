@@ -99,21 +99,14 @@ textarea {
 }
 
 /* ============ HEADER ============ */
-/* ============ HEADER ============ */
 .chat-header {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 12px;
-<<<<<<< HEAD
     padding: calc(10px + var(--safe-area-inset-top)) 10px 10px 6px;
     background: linear-gradient(135deg, #4c2196 0%, #2e1163 100%);
     border-bottom: none;
-=======
-    padding: calc(10px + var(--safe-area-inset-top)) 16px 10px 16px;
-    background: linear-gradient(135deg, #360167 0%, #561496 100%);
-    border-bottom: 2px solid rgba(255, 211, 105, 0.3);
->>>>>>> ccfda9076af6239076718407031bf79a056dd03c
     flex-shrink: 0;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
