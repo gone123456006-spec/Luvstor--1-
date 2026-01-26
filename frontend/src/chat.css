@@ -126,12 +126,16 @@ textarea {
     z-index: 1000;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     min-height: 60px;
-    /* Make header sticky at the top */
-    position: sticky;
+    /* Make header fixed at the top - won't move when keyboard opens */
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     width: 100%;
+    /* Prevent header from moving when keyboard opens */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
 }
 
 .header-left {
@@ -778,6 +782,7 @@ textarea {
 
     .chat-body {
         padding: 12px 8px 70px;
+        padding-top: calc(12px + 52px + var(--safe-area-inset-top));
         gap: 10px;
     }
 
@@ -843,6 +848,7 @@ textarea {
 
     .chat-body {
         padding: 14px 10px 75px;
+        padding-top: calc(14px + 60px + var(--safe-area-inset-top));
         gap: 11px;
     }
 
@@ -867,6 +873,7 @@ textarea {
 @media (min-width: 481px) and (max-width: 640px) {
     .chat-body {
         padding: 16px 14px 85px;
+        padding-top: calc(16px + 60px + var(--safe-area-inset-top));
         gap: 12px;
     }
 
@@ -892,6 +899,7 @@ textarea {
 
     .chat-body {
         padding: 18px 16px 90px;
+        padding-top: calc(18px + 60px + var(--safe-area-inset-top));
         gap: 14px;
     }
 
@@ -919,6 +927,7 @@ textarea {
 
     .chat-body {
         padding: 10px 0 62px;
+        padding-top: calc(10px + 40px + var(--safe-area-inset-top));
         gap: 8px;
     }
 
@@ -965,6 +974,14 @@ textarea {
     .chat-container {
         /* Use -webkit-fill-available for better iOS support */
         height: -webkit-fill-available;
+    }
+    
+    .chat-header {
+        /* Ensure header stays fixed on iOS even when keyboard opens */
+        position: fixed;
+        top: 0;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
     
     .chat-input {
