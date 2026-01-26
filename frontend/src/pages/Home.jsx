@@ -39,7 +39,8 @@ const Home = () => {
 
         <p>
           Start anonymous conversations with real people from around the world.
-          No sign-up. No pressure. Just chat.
+          <br />
+          No sign-up. No record. Just chat.
         </p>
 
         <button className="start-btn" onClick={handleStartChat}>
