@@ -235,7 +235,7 @@ const Chat = () => {
           <div className="stranger-details">
             <h4>{partnerUsername}</h4>
             <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
-              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Disconnected'}
+              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Offline'}
             </span>
           </div>
         </div>
@@ -295,7 +295,15 @@ const Chat = () => {
           placeholder={partnerStatus === 'left' ? 'Partner disconnected' : 'Chat on luvstor...'}
           value={inputValue}
           onChange={handleTyping}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (partnerStatus === 'left') {
+                handleNext();
+              } else {
+                sendMessage();
+              }
+            }
+          }}
           disabled={partnerStatus === 'left'}
         />
 
