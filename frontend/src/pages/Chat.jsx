@@ -23,6 +23,7 @@ const Chat = () => {
   const chatBodyRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [error, setError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const failedMessageRef = useRef(null);
@@ -95,6 +96,13 @@ const Chat = () => {
       window.removeEventListener('beforeunload', handlePageUnload);
     };
   }, [token, BACKEND_URL]);
+
+  useEffect(() => {
+    // Basic setup on mount
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = 0;
+    }
+  }, []);
 
   const isManualLeave = useRef(false);
 
@@ -249,29 +257,26 @@ const Chat = () => {
     };
 
     const intervalId = setInterval(fetchUpdates, 1000);
+    typingTimeoutRef.current = intervalId; // Reuse for easy cleanup access
 
     // Cleanup: Clear messages and disconnect when component unmounts
     return () => {
       clearInterval(intervalId);
 
-      // Clear messages and reset state on unmount
-      setMessages([]);
-      setPartnerStatus('online');
-      setIsPartnerTyping(false);
-
-      // Clear session storage
-      sessionStorage.removeItem('chat_messages');
-      sessionStorage.removeItem('chat_room');
-
-      // Notify backend of disconnect ONLY if not a manual leave (skip)
+      // Notify backend and clear state only if not manually leaving via Skip
       if (!isManualLeave.current) {
+        // Notify backend of disconnect
         fetch(`${BACKEND_URL}/api/chat/leave`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
-        }).catch((e) => {
-          // Silently fail on cleanup - component is unmounting
-          console.warn('Failed to notify server on unmount:', e);
-        });
+        }).catch(() => { });
+
+        // Clear state
+        setMessages([]);
+        setPartnerStatus('online');
+        setIsPartnerTyping(false);
+        sessionStorage.removeItem('chat_messages');
+        sessionStorage.removeItem('chat_room');
       }
     };
   }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
@@ -463,39 +468,55 @@ const Chat = () => {
   };
 
   const handleNext = async () => {
-    isManualLeave.current = true;
-    try {
-      await fetch(`${BACKEND_URL}/api/chat/leave`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-    } catch (e) {
-      // Log but don't block navigation - user wants to leave anyway
-      console.warn('Failed to notify server on leave:', e);
+    if (isSkipping) return;
+
+    isManualLeave.current = true; // Block the unmount cleanup leave call
+    setIsSkipping(true);
+    setPartnerStatus('left');
+    setIsPartnerTyping(false);
+
+    // Kill the updates interval immediately to stop all polling
+    if (typingTimeoutRef.current) {
+      clearInterval(typingTimeoutRef.current);
     }
 
-    // Clear all messages and state
-    setMessages([]);
-    setPartnerStatus('online');
-    setIsPartnerTyping(false);
-    setInputValue('');
-    setShowEmojiPicker(false);
-    setError(null);
-    consecutiveFailuresRef.current = 0;
-    failedMessageRef.current = null;
+    // Notify backend and clear locale immediately
+    try {
+      fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => { });
+    } catch (e) { }
 
-    // Clear session storage
     sessionStorage.removeItem('chat_messages');
     sessionStorage.removeItem('chat_room');
 
-    navigate('/match');
+    // Smooth delay for modal visibility
+    setTimeout(() => {
+      navigate('/match', { replace: true });
+    }, 1500);
   };
 
   return (
     <div
       ref={chatContainerRef}
-      className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''} ${isKeyboardOpen ? 'keyboard-open' : ''}`}
+      className={`chat-container ${showEmojiPicker ? 'emoji-open' : ''} ${isKeyboardOpen ? 'keyboard-open' : ''} ${isSkipping ? 'skipping' : ''}`}
     >
+      {isSkipping && (
+        <div className="skip-overlay">
+          <div className="skip-modal">
+            <div className="skip-modal-content">
+              <h3>Partner Left</h3>
+              <p>The other user has left the chat. <br />You'll be matched with someone new.</p>
+              <div className="skip-loader">
+                <div className="skip-loader-circle"></div>
+                <span>Matching...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="chat-header">
         <div className="header-left">
@@ -547,7 +568,13 @@ const Chat = () => {
       </div>
 
       {/* INPUT */}
-      <div className={`chat-input ${showEmojiPicker ? 'emoji-open' : ''}`} style={{ opacity: partnerStatus === 'left' ? 0.8 : 1 }}>
+      <div
+        className={`chat-input ${showEmojiPicker ? 'emoji-open' : ''}`}
+        style={{
+          opacity: (partnerStatus === 'left' || isSkipping) ? 0.6 : 1,
+          pointerEvents: isSkipping ? 'none' : 'auto'
+        }}
+      >
         <button
           className="emoji-btn"
           onClick={toggleEmojiPicker}
@@ -559,7 +586,7 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Typing..."}
+          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type a message..."}
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
