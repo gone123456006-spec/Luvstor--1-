@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
-import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw, ChevronRight } from 'lucide-react';
 import logo from '../assets/logo.png';
 import '../chat.css';
 
@@ -14,23 +14,21 @@ const Chat = () => {
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState('online');
-  const [showReactionPicker, setShowReactionPicker] = useState(null); // Track which message to show reactions for
 
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const lastUpdateRef = useRef(new Date(0).toISOString());
+  const pollingIntervalRef = useRef(null);
   const inputRef = useRef(null);
   const chatBodyRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const reactionPickerRef = useRef(null);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [error, setError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
-  const pollingIntervalRef = useRef(null);
 
   const roomId = location.state?.roomId || 'test-room';
   const partnerUsername = location.state?.partnerUsername || 'Tester';
@@ -38,9 +36,6 @@ const Chat = () => {
 
   const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
   const token = localStorage.getItem('token');
-
-  // Quick reaction emojis
-  const QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
   // Helper function to show error notifications
   const showError = (title, message, type = 'error', retryAction = null) => {
@@ -81,11 +76,13 @@ const Chat = () => {
 
       const tokenAtCleanup = localStorage.getItem('token');
       if (tokenAtCleanup) {
-        // Use keepalive or standard fetch for best-effort notification
         fetch(`${BACKEND_URL}/api/chat/leave`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${tokenAtCleanup}` }
         }).catch(() => { });
+
+        sessionStorage.removeItem('chat_messages');
+        sessionStorage.removeItem('chat_room');
       }
     };
 
@@ -96,16 +93,13 @@ const Chat = () => {
       window.removeEventListener('beforeunload', handlePageUnload);
       window.removeEventListener('popstate', handlePageUnload);
 
-      // Dedicated unmount cleanup - only fires when leaving the Chat component
+      // dedicated unmount cleanup
       if (!isManualLeave.current) {
         handlePageUnload();
 
-        // Clear local session state
         setMessages([]);
         setPartnerStatus('online');
         setIsPartnerTyping(false);
-        sessionStorage.removeItem('chat_messages');
-        sessionStorage.removeItem('chat_room');
       }
     };
   }, [BACKEND_URL]); // Mount-once logic for session lifecycle
@@ -163,15 +157,6 @@ const Chat = () => {
 
         if (data.status === 'partner_disconnected' || data.status === 'disconnected') {
           if (partnerStatus !== 'left') {
-            // Set manual leave flag to prevent cleanup conflicts
-            isManualLeave.current = true;
-
-            // Stop polling immediately
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-
             setPartnerStatus('left');
             setMessages(prev => [
               ...prev,
@@ -185,20 +170,31 @@ const Chat = () => {
               'info'
             );
 
-            // Clear session storage immediately
-            sessionStorage.removeItem('chat_messages');
-            sessionStorage.removeItem('chat_room');
-
-            // Notify backend we're leaving
-            fetch(`${BACKEND_URL}/api/chat/leave`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${currentToken}` }
-            }).catch(() => { });
-
-            // Automatically navigate to match page after 1.5 seconds (consistent with handleNext)
+            // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
-              navigate('/match', { replace: true, state: { reason: 'partner_left' } });
-            }, 1500);
+              // Clear all state
+              setMessages([]);
+              setPartnerStatus('online');
+              setIsPartnerTyping(false);
+              setInputValue('');
+              setShowEmojiPicker(false);
+              setError(null);
+              consecutiveFailuresRef.current = 0;
+              failedMessageRef.current = null;
+
+              // Clear session storage
+              sessionStorage.removeItem('chat_messages');
+              sessionStorage.removeItem('chat_room');
+
+              // Notify backend we're leaving
+              fetch(`${BACKEND_URL}/api/chat/leave`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              }).catch(() => { });
+
+              // Navigate to match page
+              navigate('/match');
+            }, 2000);
           }
           return;
         }
@@ -221,8 +217,7 @@ const Chat = () => {
               sender: partnerUsername,
               timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isOwn: false,
-              seen: msg.seen || false,
-              reaction: msg.reaction || null,
+              seen: true,
               _id: msg._id
             }));
 
@@ -235,27 +230,6 @@ const Chat = () => {
 
           const lastMsg = data.messages[data.messages.length - 1];
           lastUpdateRef.current = lastMsg.createdAt;
-        }
-
-        // Update read receipts for own messages
-        if (data.readReceipts) {
-          setMessages(prev => prev.map(msg => {
-            if (msg.isOwn && data.readReceipts.includes(msg._id)) {
-              return { ...msg, seen: true };
-            }
-            return msg;
-          }));
-        }
-
-        // Update reactions
-        if (data.reactions) {
-          setMessages(prev => prev.map(msg => {
-            const reaction = data.reactions.find(r => r.messageId === msg._id);
-            if (reaction) {
-              return { ...msg, reaction: reaction.emoji };
-            }
-            return msg;
-          }));
         }
 
         setIsPartnerTyping(data.isPartnerTyping);
@@ -299,15 +273,12 @@ const Chat = () => {
       }
       // NO /leave CALL HERE - Lifecycle hook handles it
     };
-  }, [roomId, navigate, BACKEND_URL]);
+  }, [roomId, navigate, BACKEND_URL]); // Stabilized dependencies
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target) && !event.target.closest('.emoji-btn')) {
         setShowEmojiPicker(false);
-      }
-      if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target) && !event.target.closest('.bubble')) {
-        setShowReactionPicker(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -401,7 +372,6 @@ const Chat = () => {
       }),
       seen: false,
       isOwn: true,
-      reaction: null,
       _id: 'temp-' + Date.now()
     };
 
@@ -437,13 +407,6 @@ const Chat = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Server error: ${response.status}`);
       }
-
-      const result = await response.json();
-
-      // Update message with real ID from server
-      setMessages((prev) => prev.map(msg =>
-        msg._id === messageData._id ? { ...msg, _id: result.message._id } : msg
-      ));
 
       // Success - clear failed message reference
       failedMessageRef.current = null;
@@ -498,67 +461,6 @@ const Chat = () => {
     setInputValue((prev) => prev + emojiData.emoji);
   };
 
-  // Handle long press to show reaction picker
-  const handleLongPress = (messageId) => {
-    setShowReactionPicker(messageId);
-  };
-
-  // Handle reaction click
-  const handleReaction = async (messageId, emoji) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/chat/reaction`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ roomId, messageId, emoji })
-      });
-
-      if (response.ok) {
-        // Update local state
-        setMessages(prev => prev.map(msg =>
-          msg._id === messageId ? { ...msg, reaction: emoji } : msg
-        ));
-        setShowReactionPicker(null);
-      }
-    } catch (error) {
-      console.error('Failed to send reaction:', error);
-    }
-  };
-
-  // Mark messages as read when they come into view
-  useEffect(() => {
-    const markAsRead = async () => {
-      const unreadMessages = messages.filter(msg => !msg.isOwn && !msg.seen);
-      if (unreadMessages.length > 0) {
-        const messageIds = unreadMessages.map(msg => msg._id);
-
-        try {
-          await fetch(`${BACKEND_URL}/api/chat/read`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ roomId, messageIds })
-          });
-
-          // Update local state
-          setMessages(prev => prev.map(msg =>
-            messageIds.includes(msg._id) ? { ...msg, seen: true } : msg
-          ));
-        } catch (error) {
-          console.warn('Failed to mark messages as read:', error);
-        }
-      }
-    };
-
-    // Mark as read after a short delay
-    const timer = setTimeout(markAsRead, 500);
-    return () => clearTimeout(timer);
-  }, [messages, roomId, token, BACKEND_URL]);
-
   const handleNext = async () => {
     if (isSkipping) return;
 
@@ -568,9 +470,8 @@ const Chat = () => {
     setIsPartnerTyping(false);
 
     // Kill the updates interval immediately to stop all polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
+    if (typingTimeoutRef.current) {
+      clearInterval(typingTimeoutRef.current);
     }
 
     // Notify backend and clear locale immediately
@@ -637,67 +538,14 @@ const Chat = () => {
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`bubble-container ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'}`}
+            className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'}`}
           >
-            <div
-              className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'}`}
-              onContextMenu={(e) => {
-                if (!msg.system) {
-                  e.preventDefault();
-                  handleLongPress(msg._id);
-                }
-              }}
-              onTouchStart={(e) => {
-                if (!msg.system) {
-                  const touchTimer = setTimeout(() => {
-                    handleLongPress(msg._id);
-                  }, 500);
-                  e.currentTarget.touchTimer = touchTimer;
-                }
-              }}
-              onTouchEnd={(e) => {
-                if (e.currentTarget.touchTimer) {
-                  clearTimeout(e.currentTarget.touchTimer);
-                }
-              }}
-            >
-              <p>{msg.message}</p>
-              {!msg.system && (
-                <span className="message-meta">
-                  {msg.timestamp}
-                  {msg.isOwn && (
-                    <span className="read-receipt">
-                      {msg.seen ? ' ✓✓' : ' ✓'}
-                    </span>
-                  )}
-                </span>
-              )}
-
-              {/* Reaction Display */}
-              {msg.reaction && (
-                <div className="message-reaction">
-                  {msg.reaction}
-                </div>
-              )}
-            </div>
-
-            {/* Reaction Picker */}
-            {showReactionPicker === msg._id && (
-              <div
-                className={`reaction-picker ${msg.isOwn ? 'own' : 'other'}`}
-                ref={reactionPickerRef}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    className="reaction-emoji"
-                    onClick={() => handleReaction(msg._id, emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+            <p>{msg.message}</p>
+            {!msg.system && (
+              <span>
+                {msg.timestamp}
+                {msg.isOwn && msg.seen && ' ✓✓'}
+              </span>
             )}
           </div>
         ))}
@@ -785,7 +633,7 @@ const Chat = () => {
           title={partnerStatus === 'left' ? 'Find new match' : 'Send message'}
         >
           {partnerStatus === 'left' ? (
-            <SkipForward size={18} />
+            <ChevronRight />
           ) : (
             <Send />
           )}
