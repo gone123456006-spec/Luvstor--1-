@@ -19,7 +19,7 @@ const Chat = () => {
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const lastUpdateRef = useRef(null);
+  const lastUpdateRef = useRef(new Date(0).toISOString());
   const inputRef = useRef(null);
   const chatBodyRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -113,19 +113,16 @@ const Chat = () => {
   const isManualLeave = useRef(false);
 
   useEffect(() => {
-    /*
-    if (!roomId) {
-      navigate('/match');
-      return;
-    }
-    */
-
-    lastUpdateRef.current = new Date(0).toISOString();
-
     const fetchUpdates = async () => {
+      // Don't poll if we're already transitioning or if we have no room
+      if (isSkipping || isManualLeave.current || !roomId) return;
+
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) return;
+
       try {
         const response = await fetch(`${BACKEND_URL}/api/chat/updates?roomId=${roomId}&since=${lastUpdateRef.current}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${currentToken}` }
         });
 
         if (!response.ok) {
@@ -188,13 +185,13 @@ const Chat = () => {
             // Notify backend we're leaving
             fetch(`${BACKEND_URL}/api/chat/leave`, {
               method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` }
+              headers: { 'Authorization': `Bearer ${currentToken}` }
             }).catch(() => { });
 
-            // Automatically navigate to match page after 2 seconds
+            // Automatically navigate to match page after 1.5 seconds (consistent with handleNext)
             setTimeout(() => {
               navigate('/match', { replace: true, state: { reason: 'partner_left' } });
-            }, 2000);
+            }, 1500);
           }
           return;
         }
@@ -285,7 +282,9 @@ const Chat = () => {
     const intervalId = setInterval(fetchUpdates, 1000);
     pollingIntervalRef.current = intervalId;
 
-    // Cleanup: Clear messages and disconnect when component unmounts
+    // Run once immediately
+    fetchUpdates();
+
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -294,13 +293,14 @@ const Chat = () => {
 
       // Notify backend and clear state only if not manually leaving via Skip
       if (!isManualLeave.current) {
-        // Notify backend of disconnect
-        fetch(`${BACKEND_URL}/api/chat/leave`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).catch(() => { });
+        const tokenAtCleanup = localStorage.getItem('token');
+        if (tokenAtCleanup) {
+          fetch(`${BACKEND_URL}/api/chat/leave`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${tokenAtCleanup}` }
+          }).catch(() => { });
+        }
 
-        // Clear state
         setMessages([]);
         setPartnerStatus('online');
         setIsPartnerTyping(false);
@@ -308,7 +308,7 @@ const Chat = () => {
         sessionStorage.removeItem('chat_room');
       }
     };
-  }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
+  }, [roomId, navigate, BACKEND_URL]); // Reduced dependencies to prevent loop resets
 
   useEffect(() => {
     const handleClickOutside = (event) => {
