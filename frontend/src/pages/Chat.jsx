@@ -29,6 +29,7 @@ const Chat = () => {
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
   const pollingIntervalRef = useRef(null);
+  const initialHeightRef = useRef(window.innerHeight);
 
   const roomId = location.state?.roomId || 'test-room';
   const partnerUsername = location.state?.partnerUsername || 'Tester';
@@ -296,29 +297,23 @@ const Chat = () => {
   // Handle mobile keyboard visibility
   useEffect(() => {
     const handleKeyboardToggle = () => {
-      // Use Visual Viewport API if available (modern browsers)
       if (window.visualViewport) {
         const viewport = window.visualViewport;
-        const windowHeight = window.innerHeight;
         const viewportHeight = viewport.height;
+        const initialHeight = initialHeightRef.current;
 
-        // Keyboard is likely open if viewport is significantly smaller than window
-        const keyboardThreshold = 150; // pixels
-        const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-
+        // Keyboard is open if height drops significantly (Android/iOS)
+        const isOpen = viewportHeight < initialHeight * 0.85;
         setIsKeyboardOpen(isOpen);
-      } else {
-        // Fallback for older browsers
-        const handleResize = () => {
-          const windowHeight = window.innerHeight;
-          const screenHeight = window.screen.height;
-          const isOpen = windowHeight < screenHeight * 0.75;
 
-          setIsKeyboardOpen(isOpen);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        // Adjust container height explicitly for ultimate stability
+        if (chatContainerRef.current) {
+          if (isOpen) {
+            chatContainerRef.current.style.height = `${viewportHeight}px`;
+          } else {
+            chatContainerRef.current.style.height = '100dvh';
+          }
+        }
       }
     };
 
