@@ -28,8 +28,6 @@ const Chat = () => {
   const [isRetrying, setIsRetrying] = useState(false);
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
-  const pollingIntervalRef = useRef(null);
-  const initialHeightRef = useRef(window.innerHeight);
 
   const roomId = location.state?.roomId || 'test-room';
   const partnerUsername = location.state?.partnerUsername || 'Tester';
@@ -155,15 +153,6 @@ const Chat = () => {
 
         if (data.status === 'partner_disconnected' || data.status === 'disconnected') {
           if (partnerStatus !== 'left') {
-            // Set manual leave flag to prevent cleanup conflicts
-            isManualLeave.current = true;
-
-            // Stop polling immediately
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-
             setPartnerStatus('left');
             setMessages(prev => [
               ...prev,
@@ -177,19 +166,30 @@ const Chat = () => {
               'info'
             );
 
-            // Clear session storage immediately
-            sessionStorage.removeItem('chat_messages');
-            sessionStorage.removeItem('chat_room');
-
-            // Notify backend we're leaving
-            fetch(`${BACKEND_URL}/api/chat/leave`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` }
-            }).catch(() => { });
-
             // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
-              navigate('/match', { replace: true, state: { reason: 'partner_left' } });
+              // Clear all state
+              setMessages([]);
+              setPartnerStatus('online');
+              setIsPartnerTyping(false);
+              setInputValue('');
+              setShowEmojiPicker(false);
+              setError(null);
+              consecutiveFailuresRef.current = 0;
+              failedMessageRef.current = null;
+
+              // Clear session storage
+              sessionStorage.removeItem('chat_messages');
+              sessionStorage.removeItem('chat_room');
+
+              // Notify backend we're leaving
+              fetch(`${BACKEND_URL}/api/chat/leave`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              }).catch(() => { });
+
+              // Navigate to match page
+              navigate('/match');
             }, 2000);
           }
           return;
@@ -257,14 +257,11 @@ const Chat = () => {
     };
 
     const intervalId = setInterval(fetchUpdates, 1000);
-    pollingIntervalRef.current = intervalId;
+    typingTimeoutRef.current = intervalId; // Reuse for easy cleanup access
 
     // Cleanup: Clear messages and disconnect when component unmounts
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      clearInterval(intervalId);
 
       // Notify backend and clear state only if not manually leaving via Skip
       if (!isManualLeave.current) {
@@ -297,23 +294,29 @@ const Chat = () => {
   // Handle mobile keyboard visibility
   useEffect(() => {
     const handleKeyboardToggle = () => {
+      // Use Visual Viewport API if available (modern browsers)
       if (window.visualViewport) {
         const viewport = window.visualViewport;
+        const windowHeight = window.innerHeight;
         const viewportHeight = viewport.height;
-        const initialHeight = initialHeightRef.current;
 
-        // Keyboard is open if height drops significantly (Android/iOS)
-        const isOpen = viewportHeight < initialHeight * 0.85;
+        // Keyboard is likely open if viewport is significantly smaller than window
+        const keyboardThreshold = 150; // pixels
+        const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
+
         setIsKeyboardOpen(isOpen);
+      } else {
+        // Fallback for older browsers
+        const handleResize = () => {
+          const windowHeight = window.innerHeight;
+          const screenHeight = window.screen.height;
+          const isOpen = windowHeight < screenHeight * 0.75;
 
-        // Adjust container height explicitly for ultimate stability
-        if (chatContainerRef.current) {
-          if (isOpen) {
-            chatContainerRef.current.style.height = `${viewportHeight}px`;
-          } else {
-            chatContainerRef.current.style.height = '100dvh';
-          }
-        }
+          setIsKeyboardOpen(isOpen);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
       }
     };
 
@@ -473,9 +476,8 @@ const Chat = () => {
     setIsPartnerTyping(false);
 
     // Kill the updates interval immediately to stop all polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
+    if (typingTimeoutRef.current) {
+      clearInterval(typingTimeoutRef.current);
     }
 
     // Notify backend and clear locale immediately
@@ -584,7 +586,7 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type on Luvstor..."}
+          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type a message..."}
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
@@ -637,7 +639,7 @@ const Chat = () => {
           title={partnerStatus === 'left' ? 'Find new match' : 'Send message'}
         >
           {partnerStatus === 'left' ? (
-            <SkipForward size={18} />
+            <ChevronRight />
           ) : (
             <Send />
           )}

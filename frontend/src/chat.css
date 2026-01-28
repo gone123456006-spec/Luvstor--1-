@@ -686,7 +686,7 @@ textarea {
 /* Stability during keyboard interactions */
 .chat-container.keyboard-open .chat-input {
     bottom: 15px;
-    margin-bottom: 0;
+    margin-bottom: 10px;
 }
 
 .chat-input.emoji-open {
