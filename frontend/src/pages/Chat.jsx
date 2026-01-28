@@ -28,6 +28,7 @@ const Chat = () => {
   const [isRetrying, setIsRetrying] = useState(false);
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
+  const pollingIntervalRef = useRef(null);
 
   const roomId = location.state?.roomId || 'test-room';
   const partnerUsername = location.state?.partnerUsername || 'Tester';
@@ -153,6 +154,15 @@ const Chat = () => {
 
         if (data.status === 'partner_disconnected' || data.status === 'disconnected') {
           if (partnerStatus !== 'left') {
+            // Set manual leave flag to prevent cleanup conflicts
+            isManualLeave.current = true;
+
+            // Stop polling immediately
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+
             setPartnerStatus('left');
             setMessages(prev => [
               ...prev,
@@ -166,30 +176,19 @@ const Chat = () => {
               'info'
             );
 
+            // Clear session storage immediately
+            sessionStorage.removeItem('chat_messages');
+            sessionStorage.removeItem('chat_room');
+
+            // Notify backend we're leaving
+            fetch(`${BACKEND_URL}/api/chat/leave`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            }).catch(() => { });
+
             // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
-              // Clear all state
-              setMessages([]);
-              setPartnerStatus('online');
-              setIsPartnerTyping(false);
-              setInputValue('');
-              setShowEmojiPicker(false);
-              setError(null);
-              consecutiveFailuresRef.current = 0;
-              failedMessageRef.current = null;
-
-              // Clear session storage
-              sessionStorage.removeItem('chat_messages');
-              sessionStorage.removeItem('chat_room');
-
-              // Notify backend we're leaving
-              fetch(`${BACKEND_URL}/api/chat/leave`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-              }).catch(() => { });
-
-              // Navigate to match page
-              navigate('/match');
+              navigate('/match', { replace: true, state: { reason: 'partner_left' } });
             }, 2000);
           }
           return;
@@ -257,11 +256,14 @@ const Chat = () => {
     };
 
     const intervalId = setInterval(fetchUpdates, 1000);
-    typingTimeoutRef.current = intervalId; // Reuse for easy cleanup access
+    pollingIntervalRef.current = intervalId;
 
     // Cleanup: Clear messages and disconnect when component unmounts
     return () => {
-      clearInterval(intervalId);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
 
       // Notify backend and clear state only if not manually leaving via Skip
       if (!isManualLeave.current) {
@@ -476,8 +478,9 @@ const Chat = () => {
     setIsPartnerTyping(false);
 
     // Kill the updates interval immediately to stop all polling
-    if (typingTimeoutRef.current) {
-      clearInterval(typingTimeoutRef.current);
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
     }
 
     // Notify backend and clear locale immediately
@@ -639,7 +642,7 @@ const Chat = () => {
           title={partnerStatus === 'left' ? 'Find new match' : 'Send message'}
         >
           {partnerStatus === 'left' ? (
-            <ChevronRight />
+            <SkipForward size={18} />
           ) : (
             <Send />
           )}
