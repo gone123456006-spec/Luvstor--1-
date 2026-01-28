@@ -7,9 +7,6 @@
   --chat-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --accent-yellow: #ffd369;
   --accent-yellow-hover: #ffbf00;
-  --btn-gradient: linear-gradient(135deg, #ffd369 0%, #ff9f00 100%);
-  --btn-glow: 0 4px 15px rgba(255, 211, 105, 0.3);
-  --btn-glow-hover: 0 6px 20px rgba(255, 211, 105, 0.4);
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -160,7 +157,7 @@ body {
 .home-content h1 span {
   color: #ffd369;
   display: block;
-  margin-top: 0.2rem;
+  margin-top: 0.5rem;
 }
 
 .home-content p {
@@ -176,18 +173,18 @@ body {
   border: none;
   border-radius: 30px;
   font-size: clamp(1rem, 3vw, 1.1rem);
-  background: var(--btn-gradient);
+  background: #ffd369;
   color: #000;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  box-shadow: var(--btn-glow);
+  box-shadow: 0 4px 15px rgba(255, 211, 105, 0.3);
 }
 
 .start-btn:hover {
   transform: scale(1.05);
-  box-shadow: var(--btn-glow-hover);
-  filter: brightness(1.1);
+  background: #ffbf00;
+  box-shadow: 0 6px 20px rgba(255, 211, 105, 0.4);
 }
 
 .start-btn:active {
@@ -226,34 +223,11 @@ body {
 
 .brand-footer {
   position: absolute;
-  bottom: 25px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.85rem;
-  opacity: 0.8;
+  bottom: 20px;
+  font-size: 0.9rem;
+  opacity: 0.7;
   letter-spacing: 1px;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.social-links {
-  display: flex;
-  gap: 20px;
-}
-
-.social-link {
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.social-link:hover {
-  transform: translateY(-3px);
-  color: #ffd369;
 }
 
 /* ===================== GENDER PAGE ===================== */
@@ -428,25 +402,26 @@ body {
 }
 
 .cancel-btn {
-  background: var(--btn-gradient);
+  background: linear-gradient(135deg, #ffd369 0%, #ffbf00 100%);
   color: #000;
   border: none;
   padding: 12px 32px;
-  border-radius: 50px;
+  border-radius: 30px;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: var(--btn-glow);
-  font-weight: 600;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(255, 211, 105, 0.4);
 }
 
 .cancel-btn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--btn-glow-hover);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(255, 211, 105, 0.6);
+  background: linear-gradient(135deg, #ffbf00 0%, #ff9f00 100%);
+  color: #000;
 }
 
 .loading-spinner {
@@ -489,23 +464,24 @@ body {
   }
 }
 
-.match-container button:not(.cancel-btn) {
+.match-container button {
   padding: clamp(10px, 2vw, 15px) clamp(25px, 5vw, 35px);
   font-size: clamp(0.9rem, 3vw, 1.1rem);
-  background: var(--btn-gradient);
+  background: linear-gradient(135deg, #ffd369 0%, #ffbf00 100%);
   color: #000;
   border: none;
-  border-radius: 30px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  box-shadow: var(--btn-glow);
+  box-shadow: 0 4px 15px rgba(255, 211, 105, 0.4);
 }
 
-.match-container button:not(.cancel-btn):hover {
+.match-container button:hover {
   transform: scale(1.05);
-  box-shadow: var(--btn-glow-hover);
-  filter: brightness(1.1);
+  background: linear-gradient(135deg, #ffbf00 0%, #ff9f00 100%);
+  box-shadow: 0 6px 20px rgba(255, 211, 105, 0.6);
+  color: #000;
 }
 
 .match-container button:active {
