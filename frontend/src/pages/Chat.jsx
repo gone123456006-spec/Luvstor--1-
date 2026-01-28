@@ -31,6 +31,7 @@ const Chat = () => {
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
   const pollingIntervalRef = useRef(null);
+  const initialHeightRef = useRef(window.innerHeight);
 
   const roomId = location.state?.roomId || 'test-room';
   const partnerUsername = location.state?.partnerUsername || 'Tester';
@@ -329,26 +330,25 @@ const Chat = () => {
       // Use Visual Viewport API if available (modern browsers)
       if (window.visualViewport) {
         const viewport = window.visualViewport;
-        const windowHeight = window.innerHeight;
         const viewportHeight = viewport.height;
+        const initialHeight = initialHeightRef.current;
 
-        // Keyboard is likely open if viewport is significantly smaller than window
-        const keyboardThreshold = 150; // pixels
-        const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-
+        // Keyboard is likely open if viewport is significantly smaller than initial
+        // threshold is 15% reduction
+        const isOpen = viewportHeight < initialHeight * 0.85;
         setIsKeyboardOpen(isOpen);
-      } else {
-        // Fallback for older browsers
-        const handleResize = () => {
-          const windowHeight = window.innerHeight;
-          const screenHeight = window.screen.height;
-          const isOpen = windowHeight < screenHeight * 0.75;
 
-          setIsKeyboardOpen(isOpen);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        // ROOT CAUSE FIX: Explicitly shrink container to viewport height
+        // This prevents the browser from shifting the whole page (including background)
+        if (chatContainerRef.current) {
+          if (isOpen) {
+            chatContainerRef.current.style.height = `${viewportHeight}px`;
+            chatContainerRef.current.classList.add('keyboard-open');
+          } else {
+            chatContainerRef.current.style.height = '100dvh';
+            chatContainerRef.current.classList.remove('keyboard-open');
+          }
+        }
       }
     };
 
@@ -745,34 +745,6 @@ const Chat = () => {
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
-          onFocus={(e) => {
-            setShowEmojiPicker(false);
-            // Scroll input into view when focused (keyboard will open)
-            setTimeout(() => {
-              e.target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'nearest'
-              });
-            }, 300);
-          }}
-          onBlur={() => {
-            // Small delay to check if keyboard actually closed
-            setTimeout(() => {
-              if (window.visualViewport) {
-                const viewport = window.visualViewport;
-                const windowHeight = window.innerHeight;
-                const viewportHeight = viewport.height;
-                const keyboardThreshold = 150;
-                const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-
-                if (!isOpen && chatContainerRef.current) {
-                  chatContainerRef.current.classList.remove('keyboard-open');
-                  setIsKeyboardOpen(false);
-                }
-              }
-            }, 100);
-          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               if (partnerStatus === 'left') {

@@ -609,35 +609,6 @@ body {
     font-size: 0.9rem;
   }
 
-  .chat-container {
-    border-radius: 0;
-    margin: 0;
-    height: 100vh;
-  }
-
-  .chat-header {
-    padding: 14px;
-    font-size: 1rem;
-  }
-
-  .messages {
-    padding: 12px;
-  }
-
-  .message {
-    max-width: 85%;
-    padding: 10px 14px;
-  }
-
-  .message.own {
-    max-width: 85%;
-  }
-
-  .input-area {
-    padding: 12px;
-    gap: 8px;
-  }
-
   .social-link {
     width: 28px;
     height: 28px;
@@ -646,15 +617,6 @@ body {
   .social-link svg {
     width: 14px;
     height: 14px;
-  }
-
-  .input-area input {
-    font-size: 0.95rem;
-  }
-
-  .input-area button {
-    padding: 12px 20px;
-    font-size: 0.9rem;
   }
 }
 
@@ -667,15 +629,6 @@ body {
   .gender-options {
     flex-direction: row;
   }
-
-  .message.own {
-    max-width: 75%;
-  }
-
-  .chat-container {
-    margin: 10px;
-    border-radius: 16px;
-  }
 }
 
 /* Medium Devices (Desktop) */
@@ -683,37 +636,12 @@ body {
   body {
     padding: 0;
   }
-
-  .message.own {
-    max-width: 60%;
-  }
-
-  .chat-container {
-    max-width: 900px;
-    margin: 20px auto;
-  }
 }
 
 /* Large Devices (Large Desktop) */
 @media (min-width: 1024px) {
-  .chat-container {
-    max-width: 1000px;
-    margin: 20px auto;
-  }
-
-  .message.own {
-    max-width: 50%;
-  }
-
   .home-content {
     max-width: 1100px;
-  }
-}
-
-/* Ultra Large Devices */
-@media (min-width: 1440px) {
-  .chat-container {
-    max-width: 1200px;
   }
 }
 
@@ -739,35 +667,12 @@ body {
   .features {
     margin-top: 20px;
   }
-
-  .chat-container {
-    height: 100vh;
-  }
-
-  .messages {
-    max-height: calc(100vh - 140px);
-  }
 }
 
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   body {
     color: #f0f0f0;
-  }
-
-  .messages {
-    background-color: #1a1a1a;
-  }
-
-  .message {
-    background-color: #2a2a2a;
-    color: #f0f0f0;
-  }
-
-  .input-area input {
-    background-color: #2a2a2a;
-    color: #f0f0f0;
-    border-color: #444;
   }
 }
 
@@ -779,12 +684,6 @@ body {
     font-size: 1rem;
   }
 
-  .input-area input {
-    min-height: 44px;
-    font-size: 16px;
-    /* Prevents zoom on iOS */
-  }
-
   .start-btn {
     min-height: 48px;
     padding: 16px 40px;
@@ -792,11 +691,6 @@ body {
 
   .gender-options button {
     min-height: 50px;
-  }
-
-  /* Larger tap targets for mobile */
-  .message {
-    margin-bottom: 12px;
   }
 }
 
