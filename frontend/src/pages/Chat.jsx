@@ -113,16 +113,12 @@ const Chat = () => {
   const isManualLeave = useRef(false);
 
   useEffect(() => {
-    /*
-    if (!roomId) {
-      navigate('/match');
-      return;
-    }
-    */
-
-    lastUpdateRef.current = new Date(0).toISOString();
+    if (isSkipping) return;
 
     const fetchUpdates = async () => {
+      // Don't poll if we're already transitioning
+      if (isSkipping || isManualLeave.current) return;
+
       try {
         const response = await fetch(`${BACKEND_URL}/api/chat/updates?roomId=${roomId}&since=${lastUpdateRef.current}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -158,9 +154,10 @@ const Chat = () => {
         const data = await response.json();
 
         if (data.status === 'partner_disconnected' || data.status === 'disconnected') {
-          if (partnerStatus !== 'left') {
-            // Set manual leave flag to prevent cleanup conflicts
+          if (!isSkipping && !isManualLeave.current) {
+            // Unify with handleNext flow
             isManualLeave.current = true;
+            setIsSkipping(true);
 
             // Stop polling immediately
             if (pollingIntervalRef.current) {
@@ -169,11 +166,6 @@ const Chat = () => {
             }
 
             setPartnerStatus('left');
-            setMessages(prev => [
-              ...prev,
-              { system: true, message: 'Partner left' }
-            ]);
-
             // Show notification that partner left
             showError(
               'Partner Left',
@@ -191,10 +183,10 @@ const Chat = () => {
               headers: { 'Authorization': `Bearer ${token}` }
             }).catch(() => { });
 
-            // Automatically navigate to match page after 2 seconds
+            // Automatically navigate to match page after 1.5 seconds (consistent with handleNext)
             setTimeout(() => {
               navigate('/match', { replace: true, state: { reason: 'partner_left' } });
-            }, 2000);
+            }, 1500);
           }
           return;
         }
@@ -260,11 +252,10 @@ const Chat = () => {
         console.error('Polling error:', error);
         consecutiveFailuresRef.current += 1;
 
-        // Only show error after multiple consecutive failures to avoid spam
         if (consecutiveFailuresRef.current === 3) {
           showError(
             'Connection Lost',
-            getErrorMessage(error, 'Unable to receive messages. Please check your connection.'),
+            'Unable to receive messages. Please check your connection.',
             'error',
             () => {
               consecutiveFailuresRef.current = 0;
@@ -272,7 +263,6 @@ const Chat = () => {
             }
           );
         } else if (consecutiveFailuresRef.current > 10) {
-          // After many failures, suggest reconnecting
           showError(
             'Connection Failed',
             'No server connection',
@@ -285,22 +275,20 @@ const Chat = () => {
     const intervalId = setInterval(fetchUpdates, 1000);
     pollingIntervalRef.current = intervalId;
 
-    // Cleanup: Clear messages and disconnect when component unmounts
+    fetchUpdates();
+
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
 
-      // Notify backend and clear state only if not manually leaving via Skip
       if (!isManualLeave.current) {
-        // Notify backend of disconnect
         fetch(`${BACKEND_URL}/api/chat/leave`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         }).catch(() => { });
 
-        // Clear state
         setMessages([]);
         setPartnerStatus('online');
         setIsPartnerTyping(false);
@@ -308,7 +296,7 @@ const Chat = () => {
         sessionStorage.removeItem('chat_room');
       }
     };
-  }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
+  }, [roomId, navigate, BACKEND_URL]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
