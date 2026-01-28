@@ -589,7 +589,7 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type a message..."}
+          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type on Luvstor..."}
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
