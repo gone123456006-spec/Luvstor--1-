@@ -92,6 +92,7 @@ textarea {
     bottom: 0;
     height: 100%;
     height: 100dvh;
+    z-index: 1000;
     /* Stronger dark purple tint overlay */
     background: linear-gradient(to bottom, rgba(60, 20, 90, 0.75), rgba(40, 5, 60, 0.85)), url("./assets/chat-bg-custom.jpg") center center no-repeat;
     background-size: cover;
@@ -468,19 +469,19 @@ textarea {
 .bubble {
     display: inline-flex;
     flex-direction: column;
-    padding: 7px 11px;
+    padding: 6px 10px;
     /* WhatsApp-accurate padding */
     margin: 2px 0;
     /* Tight spacing between messages */
     max-width: 75%;
-    font-size: 14.5px;
-    line-height: 1.4;
+    font-size: 14px;
+    line-height: 1.35;
     border-radius: 8px;
     word-wrap: break-word;
     word-break: break-word;
     -webkit-word-break: break-word;
     overflow-wrap: break-word;
-    animation: slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     -webkit-user-select: text;
     user-select: text;
     flex-shrink: 0;
@@ -489,7 +490,7 @@ textarea {
 @keyframes slide-in {
     from {
         opacity: 0;
-        transform: translateY(8px) scale(0.96);
+        transform: translateY(12px) scale(0.95);
     }
 
     to {
@@ -504,33 +505,29 @@ textarea {
     background: linear-gradient(135deg, #6b21a8 0%, #581c87 50%, #3b0764 100%);
     color: #fff;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 2px 5px rgba(107, 33, 168, 0.15);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     border: none;
     position: relative;
-    margin-right: 4px;
 }
 
 
 .bubble.own p {
-    font-size: 14.5px;
+    font-size: 14px;
     margin: 0;
     font-weight: 400;
     white-space: pre-wrap;
     color: #fff;
-    letter-spacing: 0.2px;
-    line-height: 1.4;
 }
 
 .bubble.own span {
     font-size: 11px;
-    opacity: 0.75;
-    margin-top: 3px;
+    opacity: 0.65;
+    margin-top: 2px;
     align-self: flex-end;
     display: flex;
     align-items: center;
-    gap: 3px;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 500;
+    gap: 2px;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Other messages */
@@ -540,7 +537,7 @@ textarea {
     /* WhatsApp white */
     color: #333;
     border-bottom-left-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     border: none;
     margin-left: 4px;
     position: relative;
@@ -548,70 +545,68 @@ textarea {
 
 
 .bubble.other p {
-    font-size: 14.5px;
+    font-size: 14px;
     margin: 0;
     font-weight: 400;
     white-space: pre-wrap;
-    color: #111;
-    letter-spacing: 0.2px;
-    line-height: 1.4;
+    color: #000;
 }
 
 .bubble.other span {
     font-size: 11px;
-    opacity: 0.55;
-    margin-top: 3px;
+    opacity: 0.65;
+    margin-top: 2px;
     align-self: flex-end;
     display: flex;
     align-items: center;
     gap: 2px;
-    color: #666;
-    font-weight: 500;
+    color: #777;
 }
 
 /* System messages */
 .bubble.system {
     align-self: center;
-    background: rgba(0, 0, 0, 0.5);
-    color: rgba(255, 211, 105, 0.95);
-    border: 1px solid rgba(255, 211, 105, 0.4);
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 211, 105, 0.9);
+    border: 1px solid rgba(255, 211, 105, 0.3);
     border-radius: 20px;
-    padding: 5px 16px;
+    padding: 4px 14px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     max-width: 90%;
     text-align: center;
     -webkit-user-select: none;
     user-select: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    letter-spacing: 0.3px;
-    margin: 4px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* ============ TYPING INDICATOR ============ */
 .typing-bubble {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    border-bottom-left-radius: 4px;
+    gap: 0.4rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 0.2rem solid rgba(255, 211, 105, 0.6);
+    border-radius: 1.2rem;
+    border-bottom-left-radius: 0.5rem;
     max-width: fit-content;
+    min-height: 2.4rem;
     align-self: flex-start;
-    margin-left: 4px;
-    margin-top: 2px;
-    margin-bottom: 2px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    min-height: auto;
+    margin-left: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .typing-bubble span {
-    width: 8px;
-    height: 8px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
-    background: #999;
+    background: #ffd369;
     animation: typing 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0.5rem rgba(255, 211, 105, 0.6);
 }
 
 .typing-bubble span:nth-child(1) {
@@ -619,27 +614,25 @@ textarea {
 }
 
 .typing-bubble span:nth-child(2) {
-    animation-delay: 0.15s;
+    animation-delay: 0.2s;
 }
 
 .typing-bubble span:nth-child(3) {
-    animation-delay: 0.3s;
+    animation-delay: 0.4s;
 }
 
 @keyframes typing {
-    0% {
-        transform: translateY(0px);
-        opacity: 0.7;
+
+    0%,
+    60%,
+    100% {
+        opacity: 0.6;
+        transform: translateY(0);
     }
 
-    28% {
-        transform: translateY(-6px);
+    30% {
         opacity: 1;
-    }
-
-    44% {
-        transform: translateY(0px);
-        opacity: 0.7;
+        transform: translateY(-10px);
     }
 }
 
@@ -679,9 +672,10 @@ textarea {
     z-index: 5000;
 
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-    transition: all 0.3s ease;
+    transition: var(--transition-smooth);
     transform: translate3d(0, 0, 0);
     will-change: transform;
+    opacity: 1 !important;
 }
 
 .chat-input:focus-within {
@@ -928,12 +922,10 @@ textarea {
     }
 
     .typing-bubble {
-        padding: 7px 11px;
-    }
-
-    .typing-bubble span {
-        width: 7px;
-        height: 7px;
+        height: 32px;
+        padding: 10px 14px;
+        max-width: 65px;
+        flex-shrink: 0;
     }
 }
 
@@ -1224,7 +1216,7 @@ textarea {
 
 /* ============ SKIP FLOW OVERLAY ============ */
 .skip-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
@@ -1233,14 +1225,14 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     animation: skipOverlayIn 0.3s ease-out;
 }
 
 .skip-modal {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.9);
     width: 85%;
     max-width: 320px;
     padding: 2rem;
