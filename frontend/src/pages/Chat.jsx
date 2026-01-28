@@ -75,33 +75,40 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Clear any persisted messages from previous sessions
-    const clearPreviousSession = () => {
-      sessionStorage.removeItem('chat_messages');
-      sessionStorage.removeItem('chat_room');
-    };
+    // Handle page refresh/close - notify server we are leaving
+    const handlePageUnload = () => {
+      if (isManualLeave.current) return;
 
-    // Handle page refresh/close - clear messages and disconnect
-    const handlePageUnload = async () => {
-      try {
-        await fetch(`${BACKEND_URL}/api/chat/leave`, {
+      const tokenAtCleanup = localStorage.getItem('token');
+      if (tokenAtCleanup) {
+        // Use keepalive or standard fetch for best-effort notification
+        fetch(`${BACKEND_URL}/api/chat/leave`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } catch (e) {
-        // Silently fail on page unload - user is leaving anyway
-        console.warn('Failed to notify server on page unload:', e);
+          headers: { 'Authorization': `Bearer ${tokenAtCleanup}` }
+        }).catch(() => { });
       }
-      clearPreviousSession();
     };
 
-    // Clear on mount to ensure fresh start
-    clearPreviousSession();
+    window.addEventListener('beforeunload', handlePageUnload);
+    window.addEventListener('popstate', handlePageUnload);
 
     return () => {
       window.removeEventListener('beforeunload', handlePageUnload);
+      window.removeEventListener('popstate', handlePageUnload);
+
+      // Dedicated unmount cleanup - only fires when leaving the Chat component
+      if (!isManualLeave.current) {
+        handlePageUnload();
+
+        // Clear local session state
+        setMessages([]);
+        setPartnerStatus('online');
+        setIsPartnerTyping(false);
+        sessionStorage.removeItem('chat_messages');
+        sessionStorage.removeItem('chat_room');
+      }
     };
-  }, [token, BACKEND_URL]);
+  }, [BACKEND_URL]); // Mount-once logic for session lifecycle
 
   useEffect(() => {
     // Basic setup on mount
@@ -290,25 +297,9 @@ const Chat = () => {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-
-      // Notify backend and clear state only if not manually leaving via Skip
-      if (!isManualLeave.current) {
-        const tokenAtCleanup = localStorage.getItem('token');
-        if (tokenAtCleanup) {
-          fetch(`${BACKEND_URL}/api/chat/leave`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${tokenAtCleanup}` }
-          }).catch(() => { });
-        }
-
-        setMessages([]);
-        setPartnerStatus('online');
-        setIsPartnerTyping(false);
-        sessionStorage.removeItem('chat_messages');
-        sessionStorage.removeItem('chat_room');
-      }
+      // NO /leave CALL HERE - Lifecycle hook handles it
     };
-  }, [roomId, navigate, BACKEND_URL]); // Reduced dependencies to prevent loop resets
+  }, [roomId, navigate, BACKEND_URL]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
