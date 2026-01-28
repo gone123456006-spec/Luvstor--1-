@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
-import { Smile, LogOut, Send, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw } from 'lucide-react';
 import logo from '../assets/logo.png';
 import '../chat.css';
 
@@ -28,8 +28,8 @@ const Chat = () => {
   const failedMessageRef = useRef(null);
   const consecutiveFailuresRef = useRef(0);
 
-  const roomId = location.state?.roomId;
-  const partnerUsername = location.state?.partnerUsername || 'Stranger';
+  const roomId = location.state?.roomId || 'test-room';
+  const partnerUsername = location.state?.partnerUsername || 'Tester';
   const myUsername = 'You';
 
   const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -91,20 +91,20 @@ const Chat = () => {
     // Clear on mount to ensure fresh start
     clearPreviousSession();
 
-    // Handle browser back/refresh
-    window.addEventListener('beforeunload', handlePageUnload);
-
     return () => {
       window.removeEventListener('beforeunload', handlePageUnload);
     };
   }, [token, BACKEND_URL]);
 
+  const isManualLeave = useRef(false);
 
   useEffect(() => {
+    /*
     if (!roomId) {
       navigate('/match');
       return;
     }
+    */
 
     lastUpdateRef.current = new Date(0).toISOString();
 
@@ -147,17 +147,17 @@ const Chat = () => {
           if (partnerStatus !== 'left') {
             setPartnerStatus('left');
             setMessages(prev => [
-              ...prev, 
-              { system: true, message: 'Partner left the chat.' }
+              ...prev,
+              { system: true, message: 'Partner left' }
             ]);
-            
+
             // Show notification that partner left
             showError(
               'Partner Left',
-              'Your partner has left the chat. Finding a new match...',
+              'Finding new match',
               'info'
             );
-            
+
             // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
               // Clear all state
@@ -169,17 +169,17 @@ const Chat = () => {
               setError(null);
               consecutiveFailuresRef.current = 0;
               failedMessageRef.current = null;
-              
+
               // Clear session storage
               sessionStorage.removeItem('chat_messages');
               sessionStorage.removeItem('chat_room');
-              
+
               // Notify backend we're leaving
               fetch(`${BACKEND_URL}/api/chat/leave`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
-              }).catch(() => {});
-              
+              }).catch(() => { });
+
               // Navigate to match page
               navigate('/match');
             }, 2000);
@@ -225,7 +225,7 @@ const Chat = () => {
       } catch (error) {
         console.error('Polling error:', error);
         consecutiveFailuresRef.current += 1;
-        
+
         // Only show error after multiple consecutive failures to avoid spam
         if (consecutiveFailuresRef.current === 3) {
           showError(
@@ -241,7 +241,7 @@ const Chat = () => {
           // After many failures, suggest reconnecting
           showError(
             'Connection Failed',
-            'Unable to connect to server. Please refresh the page or try again later.',
+            'No server connection',
             'error'
           );
         }
@@ -263,14 +263,16 @@ const Chat = () => {
       sessionStorage.removeItem('chat_messages');
       sessionStorage.removeItem('chat_room');
 
-      // Notify backend of disconnect
-      fetch(`${BACKEND_URL}/api/chat/leave`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      }).catch((e) => {
-        // Silently fail on cleanup - component is unmounting
-        console.warn('Failed to notify server on unmount:', e);
-      });
+      // Notify backend of disconnect ONLY if not a manual leave (skip)
+      if (!isManualLeave.current) {
+        fetch(`${BACKEND_URL}/api/chat/leave`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch((e) => {
+          // Silently fail on cleanup - component is unmounting
+          console.warn('Failed to notify server on unmount:', e);
+        });
+      }
     };
   }, [roomId, navigate, token, BACKEND_URL, partnerUsername, partnerStatus]);
 
@@ -292,47 +294,20 @@ const Chat = () => {
         const viewport = window.visualViewport;
         const windowHeight = window.innerHeight;
         const viewportHeight = viewport.height;
-        
+
         // Keyboard is likely open if viewport is significantly smaller than window
         const keyboardThreshold = 150; // pixels
         const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-        
-        setIsKeyboardOpen(isOpen);
-        
-        if (chatContainerRef.current) {
-          if (isOpen) {
-            chatContainerRef.current.classList.add('keyboard-open');
-          } else {
-            chatContainerRef.current.classList.remove('keyboard-open');
-          }
-        }
 
-        // Scroll input into view when keyboard opens
-        if (isOpen && inputRef.current) {
-          setTimeout(() => {
-            inputRef.current?.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          }, 100);
-        }
+        setIsKeyboardOpen(isOpen);
       } else {
         // Fallback for older browsers
         const handleResize = () => {
           const windowHeight = window.innerHeight;
           const screenHeight = window.screen.height;
           const isOpen = windowHeight < screenHeight * 0.75;
-          
+
           setIsKeyboardOpen(isOpen);
-          
-          if (chatContainerRef.current) {
-            if (isOpen) {
-              chatContainerRef.current.classList.add('keyboard-open');
-            } else {
-              chatContainerRef.current.classList.remove('keyboard-open');
-            }
-          }
         };
 
         window.addEventListener('resize', handleResize);
@@ -344,7 +319,7 @@ const Chat = () => {
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleKeyboardToggle);
       window.visualViewport.addEventListener('scroll', handleKeyboardToggle);
-      
+
       return () => {
         window.visualViewport?.removeEventListener('resize', handleKeyboardToggle);
         window.visualViewport?.removeEventListener('scroll', handleKeyboardToggle);
@@ -362,9 +337,7 @@ const Chat = () => {
 
   useEffect(() => {
     // Auto-scroll to latest message
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages, isPartnerTyping]);
 
   const handleTyping = async (e) => {
@@ -441,7 +414,7 @@ const Chat = () => {
 
     } catch (error) {
       console.error('Send message error:', error);
-      
+
       // Show error and allow retry
       showError(
         'Failed to Send',
@@ -490,6 +463,7 @@ const Chat = () => {
   };
 
   const handleNext = async () => {
+    isManualLeave.current = true;
     try {
       await fetch(`${BACKEND_URL}/api/chat/leave`, {
         method: 'POST',
@@ -518,33 +492,28 @@ const Chat = () => {
   };
 
   return (
-    <div 
+    <div
       ref={chatContainerRef}
       className={`chat-container full-screen ${showEmojiPicker ? 'emoji-open' : ''} ${isKeyboardOpen ? 'keyboard-open' : ''}`}
     >
       {/* HEADER */}
       <div className="chat-header">
         <div className="header-left">
+          <div className="partner-avatar">
+            {partnerUsername.charAt(0).toUpperCase()}
+          </div>
           <div className="stranger-details">
             <h4>{partnerUsername}</h4>
             <span className={`status-top ${isPartnerTyping ? 'typing' : partnerStatus === 'online' ? 'online' : 'offline'}`}>
-              {isPartnerTyping ? 'typing...' : partnerStatus === 'online' ? 'Online' : 'Offline'}
+              <span className="logo-dot"></span>
+              {isPartnerTyping ? 'typing...' : 'online'}
             </span>
           </div>
         </div>
 
-        <div className="chat-logo-container">
-          {logo ? (
-            <img src={logo} alt="Luvstor" className="chat-logo" />
-          ) : (
-            <div className="chat-logo">LV</div>
-          )}
-        </div>
-
         <div className="header-right">
-          <button className="next-btn" onClick={handleNext}>
-            <LogOut size={16} />
-            Next
+          <button className="skip-btn" onClick={handleNext} title="Skip">
+            <SkipForward size={24} />
           </button>
         </div>
       </div>
@@ -585,12 +554,12 @@ const Chat = () => {
           type="button"
           disabled={partnerStatus === 'left'}
         >
-          <Smile size={24} color="#ffd369" />
+          <Smile color="#666" />
         </button>
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Press Enter to find a new match..." : "Chat on luvstor..."}
+          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Typing..."}
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
@@ -598,8 +567,8 @@ const Chat = () => {
             setShowEmojiPicker(false);
             // Scroll input into view when focused (keyboard will open)
             setTimeout(() => {
-              e.target.scrollIntoView({ 
-                behavior: 'smooth', 
+              e.target.scrollIntoView({
+                behavior: 'smooth',
                 block: 'center',
                 inline: 'nearest'
               });
@@ -614,7 +583,7 @@ const Chat = () => {
                 const viewportHeight = viewport.height;
                 const keyboardThreshold = 150;
                 const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-                
+
                 if (!isOpen && chatContainerRef.current) {
                   chatContainerRef.current.classList.remove('keyboard-open');
                   setIsKeyboardOpen(false);
@@ -643,9 +612,9 @@ const Chat = () => {
           title={partnerStatus === 'left' ? 'Find new match' : 'Send message'}
         >
           {partnerStatus === 'left' ? (
-            <LogOut size={20} />
+            <ChevronRight />
           ) : (
-            <Send size={20} />
+            <Send />
           )}
         </button>
       </div>

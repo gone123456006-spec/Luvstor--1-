@@ -67,11 +67,11 @@ const Home = () => {
 
       <div className="brand-footer">
         <div className="social-links">
-          <a href="https://www.instagram.com/luvstor.app?igsh=MW4wNHF2cDV3ZG03aw==-link" target="_blank" rel="noopener noreferrer" className="social-link">
-            <Instagram size={20} />
+          <a href="https://www.instagram.com/luvstor.app?igsh=MW4wNHF2cDV3ZG03aw==-link" target="_blank" rel="noopener noreferrer" className="social-link instagram">
+            <Instagram size={24} />
           </a>
-          <a href="https://t.me/Luvstorapp" target="_blank" rel="noopener noreferrer" className="social-link">
-            <Send size={20} />
+          <a href="https://t.me/Luvstorapp" target="_blank" rel="noopener noreferrer" className="social-link telegram">
+            <Send size={24} />
           </a>
         </div>
         By Brandoverts
