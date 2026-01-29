@@ -159,7 +159,16 @@ const Chat = () => {
   useEffect(() => {
     if (!roomId) return;
 
-    socketRef.current = io(BACKEND_URL);
+    socketRef.current = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socketRef.current.on('connect_error', (err) => {
+      console.error('Socket connection error:', err);
+    });
 
     socketRef.current.emit('join_room', roomId);
 
