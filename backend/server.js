@@ -13,6 +13,7 @@ const server = http.createServer(app);
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Fix for double slashes in URLs (common in deployment)
 app.use((req, res, next) => {
@@ -66,6 +67,40 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+
+const socketIo = require('socket.io');
+
+// Initialize Socket.io with the existing server instance
+const io = socketIo(server, {
+  cors: {
+    origin: '*', // Allow all origins for simplicity, restrict in production
+    methods: ['GET', 'POST']
+  }
+});
+
+// Socket.io Logic
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`User ${socket.id} joined room ${roomId}`);
+  });
+
+  socket.on('typing', (roomId) => {
+    // Broadcast to everyone in room EXCEPT sender
+    socket.to(roomId).emit('typing');
+  });
+
+  socket.on('stop_typing', (roomId) => {
+    // Broadcast to everyone in room EXCEPT sender
+    socket.to(roomId).emit('stop_typing');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

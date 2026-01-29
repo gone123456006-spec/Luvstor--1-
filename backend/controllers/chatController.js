@@ -1,5 +1,32 @@
 const User = require('../models/User');
 const Message = require('../models/Message');
+const multer = require('multer');
+const path = require('path');
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|gif|mp3|wav|m4a|ogg|webm/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only images and audio files are allowed!'));
+    }
+}).single('file');
 
 // Helper to update user activity
 const updateActivity = async (userId) => {
@@ -126,10 +153,18 @@ exports.checkMatch = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
     try {
-        const { roomId, message } = req.body;
+        const { roomId, message, messageType, fileUrl } = req.body;
 
-        if (!roomId || !message) {
-            return res.status(400).json({ message: 'Room ID and message are required' });
+        if (!roomId) {
+            return res.status(400).json({ message: 'Room ID is required' });
+        }
+
+        if (messageType === 'text' && !message) {
+            return res.status(400).json({ message: 'Message content is required for text' });
+        }
+
+        if (messageType !== 'text' && !fileUrl) {
+            return res.status(400).json({ message: 'File URL is required for media' });
         }
 
         const user = await User.findById(req.user.id);
@@ -141,12 +176,20 @@ exports.sendMessage = async (req, res) => {
 
         const partnerIdStr = roomId.split('-').find(id => id !== user._id.toString());
 
-        const newMessage = await Message.create({
+        const newMessageData = {
             sender: user._id,
             receiver: partnerIdStr,
             roomId: roomId,
-            content: message
-        });
+            messageType: messageType || 'text'
+        };
+
+        if (messageType === 'text' || !messageType) {
+            newMessageData.content = message;
+        } else {
+            newMessageData.fileUrl = fileUrl;
+        }
+
+        const newMessage = await Message.create(newMessageData);
 
         // Update activity
         await updateActivity(user._id);
@@ -157,6 +200,24 @@ exports.sendMessage = async (req, res) => {
         console.error('Send message error:', error);
         res.status(500).json({ message: 'Server error' });
     }
+};
+
+// @desc    Upload a file
+// @route   POST /api/chat/upload
+// @access  Private
+exports.uploadFile = (req, res) => {
+    upload(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ message: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        // Return the file path
+        const fileUrl = `/uploads/${req.file.filename}`;
+        res.json({ fileUrl });
+    });
 };
 
 // @desc    Poll for updates (messages, partner status, typing)
@@ -197,16 +258,16 @@ exports.pollUpdates = async (req, res) => {
             });
         }
 
-        // Check for new messages
+        // Check for new or updated (deleted) messages
         let messageQuery = { roomId };
         if (since) {
-            messageQuery.createdAt = { $gt: new Date(since) };
+            messageQuery.updatedAt = { $gt: new Date(since) };
         }
 
-        const messages = await Message.find(messageQuery).sort({ createdAt: 1 });
+        const messages = await Message.find(messageQuery).sort({ updatedAt: 1 });
 
-        // Check typing status (if partner typed in last 3 seconds)
-        const isPartnerTyping = partner.lastTyping && (new Date() - new Date(partner.lastTyping) < 3000);
+        // Check typing status (if partner typed in last 5 seconds)
+        const isPartnerTyping = partner.lastTyping && (new Date() - new Date(partner.lastTyping) < 5000);
 
         res.json({
             status: 'connected',
@@ -261,6 +322,39 @@ exports.leaveChat = async (req, res) => {
 
     } catch (error) {
         console.error('Leave chat error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+// @desc    Delete (unsend) a message
+// @route   DELETE /api/chat/messages/:messageId
+// @access  Private
+exports.deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user.id;
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        // Only allow deleting own messages
+        if (message.sender.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this message' });
+        }
+
+        // Soft delete
+        message.isDeleted = true;
+        // Optional: clear content for privacy if it's an unsend
+        message.content = 'Message unsent';
+        message.fileUrl = null;
+
+        await message.save();
+
+        res.json({ success: true, message: 'Message unsent' });
+    } catch (error) {
+        console.error('Delete message error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
