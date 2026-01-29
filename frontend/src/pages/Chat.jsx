@@ -70,8 +70,12 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Handle page refresh/close - notify server we are leaving
-    const handlePageUnload = () => {
+    // Tracking for remounts (Strict Mode / Fast Refresh)
+    window.__chat_mount_id = (window.__chat_mount_id || 0) + 1;
+    const currentMountId = window.__chat_mount_id;
+
+    // Handle session end
+    const handleSessionEnd = () => {
       if (isManualLeave.current) return;
 
       const tokenAtCleanup = localStorage.getItem('token');
@@ -86,21 +90,23 @@ const Chat = () => {
       }
     };
 
-    window.addEventListener('beforeunload', handlePageUnload);
-    window.addEventListener('popstate', handlePageUnload);
+    window.addEventListener('beforeunload', handleSessionEnd);
+    window.addEventListener('popstate', handleSessionEnd);
 
     return () => {
-      window.removeEventListener('beforeunload', handlePageUnload);
-      window.removeEventListener('popstate', handlePageUnload);
+      window.removeEventListener('beforeunload', handleSessionEnd);
+      window.removeEventListener('popstate', handleSessionEnd);
 
-      // dedicated unmount cleanup
-      if (!isManualLeave.current) {
-        handlePageUnload();
+      // Root-cause fix: Only terminate if we didn't remount within 150ms
+      setTimeout(() => {
+        if (window.__chat_mount_id === currentMountId && !isManualLeave.current) {
+          handleSessionEnd();
 
-        setMessages([]);
-        setPartnerStatus('online');
-        setIsPartnerTyping(false);
-      }
+          setMessages([]);
+          setPartnerStatus('online');
+          setIsPartnerTyping(false);
+        }
+      }, 150);
     };
   }, [BACKEND_URL]); // Mount-once logic for session lifecycle
 
@@ -172,6 +178,10 @@ const Chat = () => {
 
             // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
+              if (isSkipping || isManualLeave.current) return;
+
+              isManualLeave.current = true;
+
               // Clear all state
               setMessages([]);
               setPartnerStatus('online');
@@ -193,7 +203,7 @@ const Chat = () => {
               }).catch(() => { });
 
               // Navigate to match page
-              navigate('/match');
+              navigate('/match', { replace: true });
             }, 2000);
           }
           return;
@@ -580,7 +590,7 @@ const Chat = () => {
 
         <input
           type="text"
-          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Type a message..."}
+          placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Chat on Luvstor..."}
           value={inputValue}
           onChange={handleTyping}
           ref={inputRef}
