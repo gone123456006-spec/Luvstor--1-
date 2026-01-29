@@ -11,7 +11,20 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+// Middleware
+const fs = require('fs');
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Robust CORS for production
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*', // Allow explicit frontend or all
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -53,7 +53,22 @@ const Chat = () => {
   const partnerUsername = location.state?.partnerUsername || 'Tester';
   const myUsername = 'You';
 
-  const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+  // Robust Backend URL handling for deployment
+  const getBackendUrl = () => {
+    if (import.meta.env.VITE_BACKEND_URL) {
+      return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+    }
+    // If no VITE_BACKEND_URL and currently on localhost, default to localhost:5000
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+    // In production without explicit vars, assume relative path /api (or same origin)
+    // Adjust this based on your specific deployment (e.g., render/vercel often need explicit vars)
+    console.warn('VITE_BACKEND_URL not set. Defaulting to relative path /api');
+    return '/api';
+  };
+
+  const BACKEND_URL = getBackendUrl();
   const token = localStorage.getItem('token');
 
   // Helper function to show error notifications
