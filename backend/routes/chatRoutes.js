@@ -7,7 +7,9 @@ const {
     sendMessage,
     pollUpdates,
     setTyping,
-    leaveChat
+    leaveChat,
+    uploadFile,
+    deleteMessage
 } = require('../controllers/chatController');
 
 router.post('/queue/join', protect, joinQueue);
@@ -16,5 +18,7 @@ router.post('/messages', protect, sendMessage);
 router.get('/updates', protect, pollUpdates);
 router.post('/typing', protect, setTyping);
 router.post('/leave', protect, leaveChat);
+router.post('/upload', protect, uploadFile);
+router.delete('/messages/:messageId', protect, deleteMessage);
 
 module.exports = router;

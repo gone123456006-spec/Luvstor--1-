@@ -16,11 +16,17 @@ const messageSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    messageType: {
+        type: String,
+        enum: ['text', 'image', 'audio'],
+        default: 'text'
+    },
     content: {
         type: String,
-        required: true,
+        required: function () { return this.messageType === 'text'; },
         trim: true
     },
+<<<<<<< HEAD
     type: {
         type: String,
         enum: ['text', 'image', 'video', 'audio', 'file'],
@@ -29,8 +35,17 @@ const messageSchema = new mongoose.Schema({
     fileUrl: {
         type: String,
         default: null
+=======
+    fileUrl: {
+        type: String,
+        required: function () { return this.messageType !== 'text'; }
+>>>>>>> 6ffbb1309f15755d71cff4d8ef57f5a1c67e3c42
     },
     isRead: {
+        type: Boolean,
+        default: false
+    },
+    isDeleted: {
         type: Boolean,
         default: false
     }
