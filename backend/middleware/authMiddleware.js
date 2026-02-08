@@ -5,21 +5,16 @@ const User = require('../models/User');
 exports.protect = async (req, res, next) => {
     let token;
 
-    // DEBUG LOGGING
-    console.log('[AuthDebug] Headers:', req.headers.authorization);
-
     // Check if token exists in Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
-        console.log('[AuthDebug] Extracted Token:', token);
     }
 
     // Make sure token exists
     if (!token) {
-        console.log('[AuthDebug] No token found');
         return res.status(401).json({
             success: false,
-            message: 'Not authorized to access this route'
+            message: 'Not authorized to access this route. Please login again.'
         });
     }
 
@@ -33,16 +28,31 @@ exports.protect = async (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({
                 success: false,
-                message: 'User not found'
+                message: 'User not found. Please login again.'
             });
         }
 
         next();
     } catch (error) {
-        console.error('[AuthDebug] Verification Failed:', error.message);
+        // Handle specific JWT errors
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Your session has expired. Please login again.',
+                expired: true
+            });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token. Please login again.',
+                invalid: true
+            });
+        }
+        
+        // Generic error
         return res.status(401).json({
             success: false,
-            message: 'Not authorized to access this route'
+            message: 'Not authorized to access this route. Please login again.'
         });
     }
 };
