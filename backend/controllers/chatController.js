@@ -158,15 +158,28 @@ exports.checkMatch = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
     try {
-        const { roomId, message } = req.body;
+        const { roomId, message, messageType = 'text', fileUrl } = req.body;
 
-        if (!roomId || !message) {
-            return res.status(400).json({ message: 'Room ID and message are required' });
+        // Validation
+        if (!roomId) {
+            return res.status(400).json({ message: 'Room ID is required' });
+        }
+
+        // For media messages, require fileUrl
+        if (messageType !== 'text' && (!fileUrl || fileUrl.trim() === '')) {
+            return res.status(400).json({
+                message: 'File URL is required for media'
+            });
+        }
+
+        // For text messages, require message content
+        if (messageType === 'text' && (!message || message.trim() === '')) {
+            return res.status(400).json({ message: 'Message content is required' });
         }
 
         const user = await User.findById(req.user.id);
 
-        console.log('[SendMessage] User:', user._id, 'RoomId:', user.roomId);
+        console.log('[SendMessage] User:', user._id, 'RoomId:', user.roomId, 'Type:', messageType);
 
         // Verify user is in this room
         if (user.roomId !== roomId) {
@@ -181,7 +194,9 @@ exports.sendMessage = async (req, res) => {
             sender: user._id,
             receiver: partnerIdStr,
             roomId: roomId,
-            content: message
+            content: messageType === 'text' ? message : '',
+            messageType: messageType,
+            fileUrl: messageType !== 'text' ? fileUrl : null
         });
 
         // Update activity
@@ -191,6 +206,16 @@ exports.sendMessage = async (req, res) => {
 
     } catch (error) {
         console.error('Send message error:', error);
+        
+        // Handle Mongoose validation errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(e => e.message);
+            return res.status(400).json({ 
+                message: messages.join(', ') || 'Validation error',
+                details: error.errors
+            });
+        }
+        
         res.status(500).json({ message: 'Server error' });
     }
 };

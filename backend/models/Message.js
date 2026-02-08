@@ -26,20 +26,9 @@ const messageSchema = new mongoose.Schema({
         required: function () { return this.messageType === 'text'; },
         trim: true
     },
-<<<<<<< HEAD
-    type: {
-        type: String,
-        enum: ['text', 'image', 'video', 'audio', 'file'],
-        default: 'text'
-    },
-    fileUrl: {
-        type: String,
-        default: null
-=======
     fileUrl: {
         type: String,
         required: function () { return this.messageType !== 'text'; }
->>>>>>> 6ffbb1309f15755d71cff4d8ef57f5a1c67e3c42
     },
     isRead: {
         type: Boolean,
