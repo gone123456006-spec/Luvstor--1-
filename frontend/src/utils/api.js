@@ -32,9 +32,20 @@ const handleResponse = async (response) => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
 
-        // Redirect to gender page for anonymous access (no login required)
-        // Users can choose to login via /auth if they want
-        window.location.href = '/gender';
+        // Redirect based on user type and error code
+        if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN') {
+            // If token expired or invalid, redirect to appropriate login page
+            if (isAnonymous) {
+                // Anonymous users go to gender page (anonymous login)
+                window.location.href = '/gender';
+            } else {
+                // Regular users go to auth page
+                window.location.href = '/auth';
+            }
+        } else {
+            // Other 401 errors (no token, user not found) - default to auth
+            window.location.href = '/auth';
+        }
         
         throw new Error(errorMessage);
     }

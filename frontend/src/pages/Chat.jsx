@@ -203,10 +203,10 @@ const Chat = () => {
         if (!response.ok) {
           if (response.status === 401) {
             // Unauthorized - token expired
-            showError('Session Expired', 'Redirecting to start new chat...', 'error', () => {
+            showError('Session Expired', 'Please log in again to continue chatting.', 'error', () => {
               localStorage.removeItem('token');
               localStorage.removeItem('user');
-              navigate('/gender');
+              navigate('/');
             });
             return;
           }
@@ -500,10 +500,10 @@ const Chat = () => {
       });
       if (!response.ok) {
         if (response.status === 401) {
-          showError('Session Expired', 'Redirecting to start new chat...', 'error', () => {
+          showError('Session Expired', 'Please log in again to send messages.', 'error', () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            navigate('/gender');
+            navigate('/');
           });
           // Remove failed message from UI
           setMessages((prev) => prev.filter(msg => msg._id !== messageData._id));
