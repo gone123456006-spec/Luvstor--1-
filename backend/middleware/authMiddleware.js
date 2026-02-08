@@ -5,13 +5,18 @@ const User = require('../models/User');
 exports.protect = async (req, res, next) => {
     let token;
 
+    // DEBUG LOGGING
+    console.log('[AuthDebug] Headers:', req.headers.authorization);
+
     // Check if token exists in Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
+        console.log('[AuthDebug] Extracted Token:', token);
     }
 
     // Make sure token exists
     if (!token) {
+        console.log('[AuthDebug] No token found');
         return res.status(401).json({
             success: false,
             message: 'Not authorized to access this route'
@@ -34,6 +39,7 @@ exports.protect = async (req, res, next) => {
 
         next();
     } catch (error) {
+        console.error('[AuthDebug] Verification Failed:', error.message);
         return res.status(401).json({
             success: false,
             message: 'Not authorized to access this route'

@@ -210,16 +210,23 @@ const Chat = () => {
         }
 
         if (data.messages && data.messages.length > 0) {
+          console.log('[Frontend Poll] Received', data.messages.length, 'messages');
+
           const valUser = localStorage.getItem('user');
           if (!valUser) return;
 
           const userObj = JSON.parse(valUser);
           const myUserId = userObj.id || userObj._id;
+          console.log('[Frontend Poll] My user ID:', myUserId);
 
           const newPartnerMessages = data.messages.filter(msg => {
             const msgSender = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-            return msgSender.toString() !== myUserId.toString();
+            const isFromPartner = msgSender.toString() !== myUserId.toString();
+            console.log('[Frontend Poll] Message sender:', msgSender, 'isFromPartner:', isFromPartner);
+            return isFromPartner;
           });
+
+          console.log('[Frontend Poll] Partner messages:', newPartnerMessages.length);
 
           if (newPartnerMessages.length > 0) {
             const formattedMsgs = newPartnerMessages.map(msg => ({
@@ -234,6 +241,7 @@ const Chat = () => {
             setMessages(prev => {
               const existingIds = new Set(prev.map(p => p._id));
               const uniqueNew = formattedMsgs.filter(m => !existingIds.has(m._id));
+              console.log('[Frontend Poll] Adding', uniqueNew.length, 'new messages to UI');
               return [...prev, ...uniqueNew];
             });
           }

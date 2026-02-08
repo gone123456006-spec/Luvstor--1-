@@ -5,6 +5,7 @@ import Gender from './pages/Gender';
 import Match from './pages/Match';
 import Chat from './pages/Chat';
 import Auth from './pages/Auth';
+import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
 function App() {
@@ -12,10 +13,14 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/gender" element={<Gender />} />
-        <Route path="/match" element={<Match />} />
-        <Route path="/chat" element={<Chat />} />
         <Route path="/auth" element={<Auth />} />
+
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/gender" element={<Gender />} />
+          <Route path="/match" element={<Match />} />
+          <Route path="/chat" element={<Chat />} />
+        </Route>
       </Routes>
     </Router>
   );

@@ -29,11 +29,16 @@ exports.joinQueue = async (req, res) => {
             { new: true }
         );
 
+        if (!user) {
+            console.log(`[Queue] User not found for ID: ${req.user.id}`);
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         console.log(`[Queue] User ${user.username} (${user._id}) joined queue with preference ${user.preference}`);
         res.json({ status: 'searching', message: 'Joined queue' });
     } catch (error) {
         console.error('Join queue error:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error: ' + error.message });
     }
 };
 
@@ -126,26 +131,61 @@ exports.checkMatch = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
     try {
-        const { roomId, message } = req.body;
+        const { roomId, message, type, fileUrl } = req.body;
 
-        if (!roomId || !message) {
-            return res.status(400).json({ message: 'Room ID and message are required' });
+        console.log('[SendMessage] Body:', req.body); // DEBUG log
+
+        // Basic validation
+        if (!roomId) {
+            return res.status(400).json({ message: 'Room ID is required' });
+        }
+
+        // Determine message type - default to 'text' if not specified
+        const messageType = type || 'text';
+
+        // Validate based on message type
+        if (messageType === 'text') {
+            // Text messages require content
+            if (!message || message.trim() === '') {
+                return res.status(400).json({ message: 'Message content is required' });
+            }
+        } else {
+            // Media messages (image, video, audio, file) require fileUrl
+            if (!fileUrl || fileUrl.trim() === '') {
+                return res.status(400).json({
+                    message: `File URL is required for ${messageType} messages. Please upload the file first.`
+                });
+            }
         }
 
         const user = await User.findById(req.user.id);
 
+        console.log('[SendMessage] User:', user._id, 'RoomId:', user.roomId);
+
         // Verify user is in this room
         if (user.roomId !== roomId) {
+            console.log('[SendMessage] ERROR: User not in room. User roomId:', user.roomId, 'Requested:', roomId);
             return res.status(403).json({ message: 'Not authorized for this room' });
         }
 
         const partnerIdStr = roomId.split('-').find(id => id !== user._id.toString());
+        console.log('[SendMessage] Partner ID:', partnerIdStr);
 
         const newMessage = await Message.create({
             sender: user._id,
             receiver: partnerIdStr,
             roomId: roomId,
-            content: message
+            content: message || '',
+            type: type || 'text',
+            fileUrl: fileUrl || null
+        });
+
+        console.log('[SendMessage] Message created:', {
+            _id: newMessage._id,
+            sender: newMessage.sender,
+            receiver: newMessage.receiver,
+            roomId: newMessage.roomId,
+            content: newMessage.content
         });
 
         // Update activity
@@ -203,7 +243,17 @@ exports.pollUpdates = async (req, res) => {
             messageQuery.createdAt = { $gt: new Date(since) };
         }
 
+        console.log('[Poll] Query:', JSON.stringify(messageQuery));
         const messages = await Message.find(messageQuery).sort({ createdAt: 1 });
+        console.log('[Poll] Found', messages.length, 'messages for room', roomId);
+
+        if (messages.length > 0) {
+            console.log('[Poll] Messages:', messages.map(m => ({
+                _id: m._id,
+                sender: m.sender,
+                content: m.content.substring(0, 20)
+            })));
+        }
 
         // Check typing status (if partner typed in last 3 seconds)
         const isPartnerTyping = partner.lastTyping && (new Date() - new Date(partner.lastTyping) < 3000);

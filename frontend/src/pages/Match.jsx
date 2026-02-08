@@ -35,7 +35,22 @@ const Match = () => {
           body: JSON.stringify({ preference: 'both' })
         });
 
-        if (!response.ok) throw new Error('Failed to join queue');
+        if (!response.ok) {
+          let errorMessage = 'Failed to join queue';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // Fallback to text if not JSON (e.g. HTML error page)
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText.substring(0, 100) || errorMessage;
+            } catch (textErr) {
+              errorMessage = `Error ${response.status}: ${response.statusText}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
 
         setStatus('Looking for a match...');
 
@@ -43,7 +58,29 @@ const Match = () => {
         intervalId = setInterval(checkMatchStatus, 2000); // Poll every 2 seconds
       } catch (error) {
         console.error('Queue join error:', error);
-        setStatus('Error joining queue. Please try again.');
+
+        // Provide more specific error messages
+        let errorMessage = 'Error joining queue. Please try again.';
+
+        if (error.message) {
+          errorMessage = error.message;
+        }
+
+        // Check for common issues
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          errorMessage = 'Session expired. Please log in again.';
+          setTimeout(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/');
+          }, 2000);
+        } else if (error.message?.includes('500') || error.message?.includes('Server error')) {
+          errorMessage = 'Server error. Please try again in a moment.';
+        } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+
+        setStatus(errorMessage);
       }
     };
 
