@@ -287,10 +287,21 @@ const Chat = () => {
           console.log('[Frontend Poll] My user ID:', myUserId);
 
           const newPartnerMessages = data.messages.filter(msg => {
-            const msgSender = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-            const isFromPartner = msgSender.toString() !== myUserId.toString();
-            console.log('[Frontend Poll] Message sender:', msgSender, 'isFromPartner:', isFromPartner);
-            return isFromPartner;
+            // Handle different sender formats: object with _id, string ID, or populated object
+            let msgSenderId;
+            if (typeof msg.sender === 'object' && msg.sender !== null) {
+              msgSenderId = msg.sender._id || msg.sender.id || msg.sender;
+            } else {
+              msgSenderId = msg.sender;
+            }
+            
+            // Convert both to strings for comparison
+            const msgSenderStr = String(msgSenderId);
+            const myUserIdStr = String(myUserId);
+            const isFromPartner = msgSenderStr !== myUserIdStr;
+            
+            console.log('[Frontend Poll] Message sender:', msgSenderStr, 'My ID:', myUserIdStr, 'isFromPartner:', isFromPartner);
+            return isFromPartner && !msg.isDeleted;
           });
 
           console.log('[Frontend Poll] Partner messages:', newPartnerMessages.length);

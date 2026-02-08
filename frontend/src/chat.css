@@ -95,7 +95,11 @@ textarea {
     height: 100dvh;
     background: url("./assets/chat-bg-new.jpg") center center no-repeat;
     background-size: cover;
-    background-attachment: fixed;
+    background-position: center;
+    /* Remove fixed attachment for mobile compatibility */
+    background-attachment: scroll;
+    /* Ensure background covers entire viewport on all devices */
+    background-repeat: no-repeat;
     /* Removed background-color/gradient overlay as requested */
     overflow: hidden;
     z-index: 999;
@@ -1573,6 +1577,8 @@ textarea {
         margin: 0 auto;
         border-left: 1px solid rgba(255, 211, 105, 0.1);
         border-right: 1px solid rgba(255, 211, 105, 0.1);
+        /* Use fixed attachment for tablets */
+        background-attachment: fixed;
     }
 
     .bubble {
@@ -1591,6 +1597,8 @@ textarea {
         margin: 0 auto;
         border-left: 2px solid rgba(255, 211, 105, 0.2);
         border-right: 2px solid rgba(255, 211, 105, 0.2);
+        /* Ensure background works on desktop */
+        background-attachment: fixed;
     }
 
     .bubble {
