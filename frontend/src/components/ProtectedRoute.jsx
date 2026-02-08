@@ -30,19 +30,13 @@ const ProtectedRoute = () => {
                 } else {
                     // Token is invalid or expired
                     if (response.status === 401) {
-                        // Get user info to determine redirect
-                        const userStr = localStorage.getItem('user');
-                        const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
-                        
                         localStorage.removeItem('token');
                         localStorage.removeItem('user');
-                        
-                        // Redirect based on user type
-                        if (isAnonymous) {
-                            window.location.href = '/gender';
-                        } else {
-                            window.location.href = '/auth';
-                        }
+                        // Always redirect to gender page for anonymous access
+                        // Users can choose to login via /auth if they want
+                        setIsAuthenticated(false);
+                        setIsLoading(false);
+                        return;
                     }
                     setIsAuthenticated(false);
                 }
@@ -67,8 +61,9 @@ const ProtectedRoute = () => {
     }
 
     if (!isAuthenticated) {
-        // Redirect to login, saving the location they tried to access
-        return <Navigate to="/auth" state={{ from: location }} replace />;
+        // For protected routes, redirect to gender page (anonymous entry point)
+        // Users can also choose to go to /auth for regular login
+        return <Navigate to="/gender" state={{ from: location }} replace />;
     }
 
     return <Outlet />;

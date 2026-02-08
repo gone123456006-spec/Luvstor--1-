@@ -55,22 +55,13 @@ const Match = () => {
           
           // Handle 401 errors (expired token, unauthorized)
           if (response.status === 401) {
-            const userStr = localStorage.getItem('user');
-            const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
-            
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
-            // Redirect based on user type
-            if (isAnonymous || errorCode === 'TOKEN_EXPIRED') {
-              setTimeout(() => {
-                navigate('/gender');
-              }, 1500);
-            } else {
-              setTimeout(() => {
-                navigate('/auth');
-              }, 1500);
-            }
+            // Redirect to gender page for anonymous access
+            setTimeout(() => {
+              navigate('/gender');
+            }, 1500);
           }
           
           throw new Error(errorMessage);
@@ -116,18 +107,11 @@ const Match = () => {
           // Handle 401 errors (expired token)
           if (response.status === 401) {
             clearInterval(intervalId);
-            const userStr = localStorage.getItem('user');
-            const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
-            
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
-            // Redirect based on user type
-            if (isAnonymous) {
-              navigate('/gender');
-            } else {
-              navigate('/auth');
-            }
+            // Redirect to gender page for anonymous access
+            navigate('/gender');
           }
           return; // Keep trying for other errors
         }
