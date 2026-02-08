@@ -12,8 +12,17 @@ const ProtectedRoute = () => {
                 const token = localStorage.getItem('token');
                 
                 if (!token) {
+                    // Check if user was anonymous - redirect to gender page instead of auth
+                    const userStr = localStorage.getItem('user');
+                    const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
+                    
                     setIsAuthenticated(false);
                     setIsLoading(false);
+                    
+                    // Redirect anonymous users to gender page, others to auth
+                    if (isAnonymous) {
+                        window.location.href = '/gender';
+                    }
                     return;
                 }
 

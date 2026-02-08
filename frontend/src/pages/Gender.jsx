@@ -73,13 +73,34 @@ const Gender = () => {
       ? `${BACKEND_URL.replace(/\/$/, '')}/api/auth/anonymous`
       : '/api/auth/anonymous';
 
+    // Check if there's an existing user ID in localStorage (even if token expired)
+    // This allows us to refresh the token instead of creating a duplicate user
+    const existingUserStr = localStorage.getItem('user');
+    let existingUserId = null;
+    if (existingUserStr) {
+      try {
+        const existingUser = JSON.parse(existingUserStr);
+        if (existingUser.id && existingUser.isAnonymous) {
+          existingUserId = existingUser.id;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Include userId if available to refresh token for existing user
+    const requestBody = {
+      ...formData,
+      ...(existingUserId && { userId: existingUserId })
+    };
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {

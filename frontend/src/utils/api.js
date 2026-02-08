@@ -25,16 +25,17 @@ const handleResponse = async (response) => {
             // If we can't parse the error, use defaults
         }
 
-        // Clear auth data
+        // Check user info BEFORE clearing (to know where to redirect)
         const userStr = localStorage.getItem('user');
         const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
         
+        // Clear auth data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
 
         // Redirect based on user type and error code
-        if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN') {
-            // If token expired or invalid, redirect to appropriate login page
+        if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'NO_TOKEN') {
+            // If token expired, invalid, or missing, redirect to appropriate login page
             if (isAnonymous) {
                 // Anonymous users go to gender page (anonymous login)
                 window.location.href = '/gender';
@@ -43,8 +44,12 @@ const handleResponse = async (response) => {
                 window.location.href = '/auth';
             }
         } else {
-            // Other 401 errors (no token, user not found) - default to auth
-            window.location.href = '/auth';
+            // Other 401 errors (user not found) - check if was anonymous
+            if (isAnonymous) {
+                window.location.href = '/gender';
+            } else {
+                window.location.href = '/auth';
+            }
         }
         
         throw new Error(errorMessage);

@@ -122,7 +122,7 @@ exports.login = async (req, res, next) => {
 // @access  Public
 exports.anonymousLogin = async (req, res, next) => {
     try {
-        const { username, country, gender, interests } = req.body;
+        const { username, country, gender, interests, userId } = req.body;
 
         // Validate required fields
         if (!username || !country || !gender) {
@@ -132,16 +132,83 @@ exports.anonymousLogin = async (req, res, next) => {
             });
         }
 
-        // Check if username is taken (optional: could append random string instead)
+        let user;
+
+        // If userId is provided, try to find and refresh token for existing anonymous user
+        if (userId) {
+            user = await User.findOne({ 
+                _id: userId, 
+                isAnonymous: true 
+            });
+
+            if (user) {
+                // Update user details if they changed
+                user.username = username;
+                user.country = country;
+                user.gender = gender;
+                if (interests) user.interests = interests;
+                await user.save();
+
+                // Generate new token for existing user
+                const token = generateToken(user._id);
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Anonymous session refreshed',
+                    token,
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        country: user.country,
+                        gender: user.gender,
+                        interests: user.interests,
+                        isAnonymous: true
+                    }
+                });
+            }
+        }
+
+        // Check if an anonymous user with the same username already exists
+        const existingUser = await User.findOne({ 
+            username: username, 
+            isAnonymous: true 
+        });
+
+        if (existingUser) {
+            // Update user details and refresh token
+            existingUser.country = country;
+            existingUser.gender = gender;
+            if (interests) existingUser.interests = interests;
+            await existingUser.save();
+
+            // Generate new token
+            const token = generateToken(existingUser._id);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Anonymous session refreshed',
+                token,
+                user: {
+                    id: existingUser._id,
+                    username: existingUser.username,
+                    country: existingUser.country,
+                    gender: existingUser.gender,
+                    interests: existingUser.interests,
+                    isAnonymous: true
+                }
+            });
+        }
+
+        // Check if username is taken by non-anonymous user
         let finalUsername = username;
         const userExists = await User.findOne({ username });
-        if (userExists) {
-            // Append random 4 digit number if taken
+        if (userExists && !userExists.isAnonymous) {
+            // Append random 4 digit number if taken by non-anonymous user
             finalUsername = `${username}_${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        // Create anonymous user
-        const user = await User.create({
+        // Create new anonymous user only if no existing user found
+        user = await User.create({
             username: finalUsername,
             country,
             gender,
