@@ -10,10 +10,44 @@ const getAuthToken = () => localStorage.getItem('token');
 const handleResponse = async (response) => {
     // Handle 401 Unauthorized globally
     if (response.status === 401) {
+        // Try to get error details from response
+        let errorCode = 'NO_TOKEN';
+        let errorMessage = 'Unauthorized';
+        
+        try {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errorData = await response.json();
+                errorCode = errorData.code || errorCode;
+                errorMessage = errorData.message || errorMessage;
+            }
+        } catch (e) {
+            // If we can't parse the error, use defaults
+        }
+
+        // Clear auth data
+        const userStr = localStorage.getItem('user');
+        const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
+        
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/auth'; // Redirect to login
-        throw new Error('Unauthorized');
+
+        // Redirect based on user type and error code
+        if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN') {
+            // If token expired or invalid, redirect to appropriate login page
+            if (isAnonymous) {
+                // Anonymous users go to gender page (anonymous login)
+                window.location.href = '/gender';
+            } else {
+                // Regular users go to auth page
+                window.location.href = '/auth';
+            }
+        } else {
+            // Other 401 errors (no token, user not found) - default to auth
+            window.location.href = '/auth';
+        }
+        
+        throw new Error(errorMessage);
     }
 
     // Check if response is JSON

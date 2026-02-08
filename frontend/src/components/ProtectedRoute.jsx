@@ -10,12 +10,40 @@ const ProtectedRoute = () => {
         const checkAuth = async () => {
             try {
                 const token = localStorage.getItem('token');
-                // Optional: You could verify the token with the backend here if needed
-                // const response = await fetch('/api/auth/me', ...);
+                
+                if (!token) {
+                    setIsAuthenticated(false);
+                    setIsLoading(false);
+                    return;
+                }
 
-                if (token) {
+                // Verify token with backend
+                const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+                const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
                     setIsAuthenticated(true);
                 } else {
+                    // Token is invalid or expired
+                    if (response.status === 401) {
+                        // Get user info to determine redirect
+                        const userStr = localStorage.getItem('user');
+                        const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
+                        
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        
+                        // Redirect based on user type
+                        if (isAnonymous) {
+                            window.location.href = '/gender';
+                        } else {
+                            window.location.href = '/auth';
+                        }
+                    }
                     setIsAuthenticated(false);
                 }
             } catch (error) {

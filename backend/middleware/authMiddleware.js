@@ -14,7 +14,8 @@ exports.protect = async (req, res, next) => {
     if (!token) {
         return res.status(401).json({
             success: false,
-            message: 'Not authorized to access this route. Please login again.'
+            message: 'Not authorized to access this route',
+            code: 'NO_TOKEN'
         });
     }
 
@@ -28,31 +29,27 @@ exports.protect = async (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({
                 success: false,
-                message: 'User not found. Please login again.'
+                message: 'User not found',
+                code: 'USER_NOT_FOUND'
             });
         }
 
         next();
     } catch (error) {
-        // Handle specific JWT errors
-        if (error.name === 'TokenExpiredError') {
+        // Check if token is expired
+        if (error.name === 'TokenExpiredError' || error.message === 'jwt expired') {
             return res.status(401).json({
                 success: false,
-                message: 'Your session has expired. Please login again.',
-                expired: true
-            });
-        } else if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token. Please login again.',
-                invalid: true
+                message: 'Token expired. Please log in again.',
+                code: 'TOKEN_EXPIRED'
             });
         }
         
-        // Generic error
+        // Other JWT errors (invalid token, malformed, etc.)
         return res.status(401).json({
             success: false,
-            message: 'Not authorized to access this route. Please login again.'
+            message: 'Invalid token. Please log in again.',
+            code: 'INVALID_TOKEN'
         });
     }
 };

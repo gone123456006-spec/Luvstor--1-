@@ -37,9 +37,12 @@ const Match = () => {
 
         if (!response.ok) {
           let errorMessage = 'Failed to join queue';
+          let errorCode = null;
+          
           try {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
+            errorCode = errorData.code || null;
           } catch (e) {
             // Fallback to text if not JSON (e.g. HTML error page)
             try {
@@ -49,6 +52,27 @@ const Match = () => {
               errorMessage = `Error ${response.status}: ${response.statusText}`;
             }
           }
+          
+          // Handle 401 errors (expired token, unauthorized)
+          if (response.status === 401) {
+            const userStr = localStorage.getItem('user');
+            const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
+            
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            // Redirect based on user type
+            if (isAnonymous || errorCode === 'TOKEN_EXPIRED') {
+              setTimeout(() => {
+                navigate('/gender');
+              }, 1500);
+            } else {
+              setTimeout(() => {
+                navigate('/auth');
+              }, 1500);
+            }
+          }
+          
           throw new Error(errorMessage);
         }
 
@@ -67,13 +91,9 @@ const Match = () => {
         }
 
         // Check for common issues
-        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-          errorMessage = 'Session expired. Please log in again.';
-          setTimeout(() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/');
-          }, 2000);
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized') || error.message?.includes('expired')) {
+          errorMessage = 'Session expired. Redirecting to login...';
+          // Note: Redirect is already handled in the response handler above
         } else if (error.message?.includes('500') || error.message?.includes('Server error')) {
           errorMessage = 'Server error. Please try again in a moment.';
         } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
@@ -92,7 +112,25 @@ const Match = () => {
           }
         });
 
-        if (!response.ok) return; // Keep trying or handle error
+        if (!response.ok) {
+          // Handle 401 errors (expired token)
+          if (response.status === 401) {
+            clearInterval(intervalId);
+            const userStr = localStorage.getItem('user');
+            const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
+            
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            // Redirect based on user type
+            if (isAnonymous) {
+              navigate('/gender');
+            } else {
+              navigate('/auth');
+            }
+          }
+          return; // Keep trying for other errors
+        }
 
         const data = await response.json();
 
@@ -104,6 +142,8 @@ const Match = () => {
         }
       } catch (error) {
         console.error('Polling error:', error);
+        // If it's a network error, we'll keep trying
+        // If it's an auth error, it will be caught by the response check above
       }
     };
 
