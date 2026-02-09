@@ -1229,7 +1229,8 @@ textarea {
 .chat-input-wrapper {
     position: fixed;
     /* Fixed to viewport bottom */
-    bottom: 0;
+    bottom: 20px;
+    /* Lifted 20px from bottom */
     left: 0;
     right: 0;
     background: rgba(11, 11, 11, 0.95);
