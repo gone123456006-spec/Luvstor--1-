@@ -348,6 +348,110 @@ textarea {
     background: rgba(255, 211, 105, 0.5);
 }
 
+/* ============ SWIPE TO REPLY ============ */
+.message-swipe-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    touch-action: pan-y;
+}
+.message-swipe-row.other-row {
+    justify-content: flex-start;
+}
+.message-swipe-row.other-row .bubble { order: 0; }
+.message-swipe-row.other-row .swipe-reveal { order: 1; }
+.message-swipe-row.own-row {
+    justify-content: flex-end;
+}
+.message-swipe-row.own-row .bubble { order: 1; }
+.message-swipe-row.own-row .swipe-reveal { order: 0; }
+.message-swipe-row.system-row {
+    justify-content: center;
+}
+.message-swipe-row.system-row .bubble {
+    order: 0;
+}
+
+.swipe-reveal {
+    width: 72px;
+    min-width: 72px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 18px;
+    margin: 0 4px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    padding: 8px 0;
+}
+.swipe-reveal svg {
+    flex-shrink: 0;
+}
+
+.bubble {
+    transition: transform 0.1s ease-out;
+}
+
+/* ============ REPLY BAR (Instagram-style) ============ */
+.reply-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 8px;
+}
+.reply-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.reply-bar-icon {
+    flex-shrink: 0;
+    color: var(--accent);
+    opacity: 0.9;
+}
+.reply-bar-preview {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.reply-bar-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+.reply-bar-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.reply-bar-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.reply-bar-close:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 /* ============ MESSAGE BUBBLES ============ */
 /* ============ MESSAGE BUBBLES ============ */
 .bubble {

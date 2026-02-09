@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
-import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw, ChevronRight, Image as ImageIcon, Mic, Square } from 'lucide-react';
+import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw, ChevronRight, Image as ImageIcon, Mic, Square, Reply } from 'lucide-react';
 import { io } from 'socket.io-client';
 import logo from '../assets/logo.png';
 import '../chat.css';
@@ -16,6 +16,11 @@ const Chat = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState('online');
   const [contextMenuMsgId, setContextMenuMsgId] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [activeSwipe, setActiveSwipe] = useState(null);
+
+  const swipeStartRef = useRef({ x: 0, msgId: null });
+  const swipeMessageRef = useRef(null);
 
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -112,16 +117,13 @@ const Chat = () => {
     const handleSessionEnd = () => {
       if (isManualLeave.current) return;
 
-      const tokenAtCleanup = localStorage.getItem('token');
-      if (tokenAtCleanup) {
-        fetch(`${BACKEND_URL}/api/chat/leave`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${tokenAtCleanup}` }
-        }).catch(() => { });
+      fetch(`${BACKEND_URL}/api/chat/leave`, {
+        method: 'POST',
+        ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
+      }).catch(() => { });
 
-        sessionStorage.removeItem('chat_messages');
-        sessionStorage.removeItem('chat_room');
-      }
+      sessionStorage.removeItem('chat_messages');
+      sessionStorage.removeItem('chat_room');
     };
 
     window.addEventListener('beforeunload', handleSessionEnd);
@@ -192,24 +194,13 @@ const Chat = () => {
       // Don't poll if we're already transitioning or if we have no room
       if (isSkipping || isManualLeave.current || !roomId) return;
 
-      const currentToken = localStorage.getItem('token');
-      if (!currentToken) return;
-
       try {
+        const currentToken = localStorage.getItem('token');
         const response = await fetch(`${BACKEND_URL}/api/chat/updates?roomId=${roomId}&since=${lastUpdateRef.current}`, {
-          headers: { 'Authorization': `Bearer ${currentToken}` }
+          ...(currentToken && { headers: { 'Authorization': `Bearer ${currentToken}` } })
         });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            // Unauthorized - token expired
-            showError('Session Expired', 'Please log in again to continue chatting.', 'error', () => {
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-              navigate('/');
-            });
-            return;
-          }
           if (response.status >= 500) {
             // Server error
             consecutiveFailuresRef.current += 1;
@@ -267,7 +258,7 @@ const Chat = () => {
               // Notify backend we're leaving
               fetch(`${BACKEND_URL}/api/chat/leave`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
               }).catch(() => { });
 
               // Navigate to match page
@@ -281,34 +272,35 @@ const Chat = () => {
           console.log('[Frontend Poll] Received', data.messages.length, 'messages');
 
           const valUser = localStorage.getItem('user');
-          if (!valUser) return;
-          const userObj = JSON.parse(valUser);
-          const myUserId = userObj.id || userObj._id;
-          console.log('[Frontend Poll] My user ID:', myUserId);
+          const myUserId = valUser ? (() => {
+            try {
+              const userObj = JSON.parse(valUser);
+              return userObj.id || userObj._id;
+            } catch (_) { return null; }
+          })() : null;
 
           const newPartnerMessages = data.messages.filter(msg => {
-            // Handle different sender formats: object with _id, string ID, or populated object
+            if (msg.isDeleted) return false;
+            if (!myUserId) return true; // No user: treat all as from partner
             let msgSenderId;
             if (typeof msg.sender === 'object' && msg.sender !== null) {
               msgSenderId = msg.sender._id || msg.sender.id || msg.sender;
             } else {
               msgSenderId = msg.sender;
             }
-            
-            // Convert both to strings for comparison
             const msgSenderStr = String(msgSenderId);
             const myUserIdStr = String(myUserId);
-            const isFromPartner = msgSenderStr !== myUserIdStr;
-            
-            console.log('[Frontend Poll] Message sender:', msgSenderStr, 'My ID:', myUserIdStr, 'isFromPartner:', isFromPartner);
-            return isFromPartner && !msg.isDeleted;
+            return msgSenderStr !== myUserIdStr;
           });
 
           console.log('[Frontend Poll] Partner messages:', newPartnerMessages.length);
 
           if (newPartnerMessages.length > 0) {
             const formattedMsgs = newPartnerMessages.map(msg => ({
-              message: msg.content,
+              message: msg.content != null ? String(msg.content) : '',
+              messageType: msg.messageType || 'text',
+              fileUrl: msg.fileUrl || null,
+              isDeleted: !!msg.isDeleted,
               sender: partnerUsername,
               timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isOwn: false,
@@ -370,7 +362,7 @@ const Chat = () => {
       }
       // NO /leave CALL HERE - Lifecycle hook handles it
     };
-  }, [roomId, navigate, BACKEND_URL, token, isSkipping, partnerStatus, error, myUsername, partnerUsername]); // Fixed: Added missing dependencies
+  }, [roomId, navigate, BACKEND_URL, token, isSkipping, partnerStatus, error, myUsername, partnerUsername]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -500,7 +492,7 @@ const Chat = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify({
           roomId,
@@ -510,23 +502,13 @@ const Chat = () => {
         })
       });
       if (!response.ok) {
-        if (response.status === 401) {
-          showError('Session Expired', 'Please log in again to send messages.', 'error', () => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/');
-          });
-          // Remove failed message from UI
-          setMessages((prev) => prev.filter(msg => msg._id !== messageData._id));
-          return;
-        }
-
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Server error: ${response.status}`);
       }
 
-      // Success - clear failed message reference
+      // Success - clear failed message reference and reply context
       failedMessageRef.current = null;
+      setReplyingTo(null);
 
     } catch (error) {
       console.error('Send message error:', error);
@@ -544,7 +526,7 @@ const Chat = () => {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
+                  ...(token && { 'Authorization': `Bearer ${token}` })
                 },
                 body: JSON.stringify({
                   roomId: failedMessageRef.current.roomId,
@@ -588,9 +570,7 @@ const Chat = () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/upload`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { ...(token && { 'Authorization': `Bearer ${token}` }) },
         body: formData
       });
 
@@ -723,7 +703,7 @@ const Chat = () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/messages/${messageId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
       });
 
       if (!response.ok) throw new Error('Delete failed');
@@ -736,6 +716,66 @@ const Chat = () => {
       console.error('Delete error:', error);
       showError('Delete Failed', 'Could not unsend message.');
     }
+  };
+
+  const SWIPE_THRESHOLD = 60;
+  const SWIPE_MAX = 80;
+
+  const getSwipeTranslate = (msgId, isOwn) => {
+    if (!activeSwipe || activeSwipe.messageId !== msgId) return 0;
+    const x = Math.max(-SWIPE_MAX, activeSwipe.translateX);
+    return isOwn ? -x : x;
+  };
+
+  const handleSwipeStart = (e, msg) => {
+    if (msg.system) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    swipeStartRef.current = { x, msgId: msg._id };
+    swipeMessageRef.current = msg;
+    if (!e.touches) {
+      const onMouseMove = (e2) => {
+        if (swipeStartRef.current.msgId !== msg._id) return;
+        const deltaX = e2.clientX - swipeStartRef.current.x;
+        if (Math.abs(deltaX) < 10) return;
+        setActiveSwipe({ messageId: msg._id, translateX: deltaX });
+      };
+      const onMouseUp = () => {
+        handleSwipeEnd();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+  };
+
+  const handleSwipeMove = (e, msg) => {
+    if (msg.system || swipeStartRef.current.msgId !== msg._id) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const deltaX = x - swipeStartRef.current.x;
+    if (Math.abs(deltaX) < 10) return;
+    setActiveSwipe({ messageId: msg._id, translateX: deltaX });
+  };
+
+  const handleSwipeEnd = () => {
+    const msg = swipeMessageRef.current;
+    if (!msg) return;
+    const current = activeSwipe && activeSwipe.messageId === msg._id ? activeSwipe.translateX : 0;
+    if (current <= -SWIPE_THRESHOLD) {
+      setReplyingTo({
+        _id: msg._id,
+        message: msg.messageType === 'text' ? (msg.message || '') : (msg.messageType === 'image' ? 'Photo' : 'Audio'),
+        sender: msg.isOwn ? myUsername : partnerUsername
+      });
+      inputRef.current?.focus();
+    }
+    setActiveSwipe(null);
+    swipeStartRef.current = { x: 0, msgId: null };
+    swipeMessageRef.current = null;
+  };
+
+  const handleReplyCancel = () => {
+    setReplyingTo(null);
   };
 
   const handleNext = async () => {
@@ -762,7 +802,7 @@ const Chat = () => {
     try {
       fetch(`${BACKEND_URL}/api/chat/leave`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
       }).catch(() => { });
     } catch (e) { }
 
@@ -822,27 +862,41 @@ const Chat = () => {
         {messages.map((msg, idx) => (
           <div
             key={msg._id || idx}
-            className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'} ${msg.messageType !== 'text' ? 'media-bubble' : ''} ${msg.isDeleted ? 'deleted' : ''}`}
-            onClick={(e) => {
-              if (msg.isOwn && !msg.isDeleted && !msg.system) {
-                e.stopPropagation();
-                setContextMenuMsgId(contextMenuMsgId === msg._id ? null : msg._id);
-              }
-            }}
+            className={`message-swipe-row ${msg.system ? 'system-row' : msg.isOwn ? 'own-row' : 'other-row'}`}
+            onTouchStart={(e) => handleSwipeStart(e, msg)}
+            onTouchMove={(e) => handleSwipeMove(e, msg)}
+            onTouchEnd={(e) => handleSwipeEnd()}
+            onMouseDown={(e) => handleSwipeStart(e, msg)}
           >
-            {msg.system ? (
-              <p>{msg.message}</p>
-            ) : (
-              <div className="bubble-content">
-                {msg.isOwn && contextMenuMsgId === msg._id && (
-                  <button
-                    className="unsend-btn"
-                    onClick={() => handleDeleteMessage(msg._id)}
-                  >
-                    Unsend
-                  </button>
-                )}
-                {msg.messageType === 'image' && !msg.isDeleted && (
+            {!msg.system && (
+              <div className="swipe-reveal">
+                <Reply size={18} />
+                <span>Reply</span>
+              </div>
+            )}
+            <div
+              className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'} ${msg.messageType !== 'text' ? 'media-bubble' : ''} ${msg.isDeleted ? 'deleted' : ''}`}
+              style={!msg.system ? { transform: `translateX(${getSwipeTranslate(msg._id, msg.isOwn)}px)` } : undefined}
+              onClick={(e) => {
+                if (msg.isOwn && !msg.isDeleted && !msg.system) {
+                  e.stopPropagation();
+                  setContextMenuMsgId(contextMenuMsgId === msg._id ? null : msg._id);
+                }
+              }}
+            >
+              {msg.system ? (
+                <p>{msg.message}</p>
+              ) : (
+                <div className="bubble-content">
+                  {msg.isOwn && contextMenuMsgId === msg._id && (
+                    <button
+                      className="unsend-btn"
+                      onClick={() => handleDeleteMessage(msg._id)}
+                    >
+                      Unsend
+                    </button>
+                  )}
+                {msg.messageType === 'image' && !msg.isDeleted && msg.fileUrl && (
                   <div className="media-container image-msg">
                     <img
                       src={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${BACKEND_URL}${msg.fileUrl}`}
@@ -852,24 +906,25 @@ const Chat = () => {
                     />
                   </div>
                 )}
-                {msg.messageType === 'audio' && !msg.isDeleted && (
+                {msg.messageType === 'audio' && !msg.isDeleted && msg.fileUrl && (
                   <div className="media-container audio-msg">
                     <div className="audio-player-wrapper">
                       <audio controls src={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${BACKEND_URL}${msg.fileUrl}`} />
                     </div>
                   </div>
                 )}
-                {(msg.messageType === 'text' || msg.isDeleted) && (
-                  <p className={msg.isDeleted ? 'deleted-text' : ''}>{msg.message}</p>
-                )}
-                {!msg.system && (
-                  <span className="message-time">
-                    {msg.timestamp}
-                    {msg.isOwn && msg.seen && !msg.isDeleted && ' ✓✓'}
-                  </span>
-                )}
-              </div>
-            )}
+                  {(msg.messageType === 'text' || msg.isDeleted) && (
+                    <p className={msg.isDeleted ? 'deleted-text' : ''}>{msg.message}</p>
+                  )}
+                  {!msg.system && (
+                    <span className="message-time">
+                      {msg.timestamp}
+                      {msg.isOwn && msg.seen && !msg.isDeleted && ' ✓✓'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
 
@@ -892,6 +947,20 @@ const Chat = () => {
           pointerEvents: isSkipping ? 'none' : 'auto'
         }}
       >
+        {replyingTo && (
+          <div className="reply-bar">
+            <div className="reply-bar-content">
+              <Reply size={14} className="reply-bar-icon" />
+              <div className="reply-bar-preview">
+                <span className="reply-bar-sender">{replyingTo.sender}</span>
+                <span className="reply-bar-text">{replyingTo.message.length > 40 ? replyingTo.message.slice(0, 40) + '…' : replyingTo.message}</span>
+              </div>
+            </div>
+            <button type="button" className="reply-bar-close" onClick={handleReplyCancel} aria-label="Cancel reply">
+              <X size={18} />
+            </button>
+          </div>
+        )}
         <div className="instagram-input-pill">
           <button
             className="camera-btn-circle"
