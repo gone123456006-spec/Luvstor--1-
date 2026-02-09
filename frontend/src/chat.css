@@ -327,49 +327,36 @@ textarea {
     background-image:
         radial-gradient(ellipse at center,
             rgba(0, 0, 0, 0) 35%,
-            rgba(0, 0, 0, 0.55) 100%
-        ),
+            rgba(0, 0, 0, 0.55) 100%),
         linear-gradient(135deg,
             rgba(255, 255, 255, 0.025) 25%,
             transparent 25%,
             transparent 50%,
             rgba(255, 255, 255, 0.025) 50%,
             rgba(255, 255, 255, 0.025) 75%,
-            transparent 75%
-        ),
-        linear-gradient(
+            transparent 75%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px),
+        linear-gradient(90deg,
             rgba(255, 255, 255, 0.02) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.02) 1px,
-            transparent 1px
-        ),
+            transparent 1px),
         linear-gradient(45deg,
             rgba(255, 255, 255, 0.02) 1px,
-            transparent 1px
-        ),
+            transparent 1px),
         linear-gradient(-45deg,
             rgba(255, 255, 255, 0.018) 1px,
-            transparent 1px
-        ),
+            transparent 1px),
         linear-gradient(60deg,
             rgba(255, 255, 255, 0.018) 2px,
-            transparent 2px
-        ),
-        linear-gradient(
-            to right,
+            transparent 2px),
+        linear-gradient(to right,
             rgba(255, 255, 255, 0.015) 2px,
-            transparent 2px
-        ),
-        repeating-linear-gradient(
-            -15deg,
+            transparent 2px),
+        repeating-linear-gradient(-15deg,
             rgba(255, 255, 255, 0.015) 0,
             rgba(255, 255, 255, 0.015) 2px,
             transparent 2px,
-            transparent 8px
-        );
+            transparent 8px);
     background-size:
         100% 100%,
         120px 120px,
@@ -839,7 +826,7 @@ textarea {
    but standard <audio> styling is limited. We focus on the container. */
 
 
- .message-time {
+.message-time {
     font-size: 11px;
     color: var(--ig-text-secondary);
     margin-top: 4px;
@@ -1240,9 +1227,12 @@ textarea {
 /* ============ FLOATING CHAT INPUT ============ */
 .chat-input-wrapper {
     background: transparent;
-    padding: 12px;
+    padding: 12px 12px 24px 12px;
+    /* Increased bottom padding from 12px to 24px */
     display: flex;
     justify-content: center;
+    margin-bottom: 8px;
+    /* Added margin to lift it further up */
 }
 
 .chat-input-container {

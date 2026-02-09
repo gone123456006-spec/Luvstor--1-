@@ -208,9 +208,8 @@ exports.sendMessage = async (req, res) => {
             replyTo: replyToPayload
         });
 
-        // Update activity
-        await updateActivity(user._id);
-
+        // Note: We broadcast to the entire room here. The frontend should handle deduplication
+        // based on message IDs to prevent double display
         const io = req.app.get('io');
         if (io) {
             io.to(roomId).emit('receive_message', {
@@ -229,16 +228,16 @@ exports.sendMessage = async (req, res) => {
 
     } catch (error) {
         console.error('Send message error:', error);
-        
+
         // Handle Mongoose validation errors
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(e => e.message);
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: messages.join(', ') || 'Validation error',
                 details: error.errors
             });
         }
-        
+
         res.status(500).json({ message: 'Server error' });
     }
 };

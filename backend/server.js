@@ -112,6 +112,10 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('stop_typing');
   });
 
+  // REMOVED: This was causing double messages!
+  // The HTTP POST /api/chat/messages endpoint already broadcasts via io.to(roomId)
+  // So we don't need to forward messages here - it creates duplicates
+  /*
   socket.on('send_message', (data) => {
     try {
       const roomId = data?.roomId || data?.room;
@@ -121,6 +125,7 @@ io.on('connection', (socket) => {
       console.error('Socket send_message error:', error);
     }
   });
+  */
 
   socket.on('unsend_message', async (payload) => {
     try {
