@@ -307,7 +307,8 @@ textarea {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: calc(var(--header-base-height) + var(--safe-area-inset-top) + 16px) 20px calc(var(--input-container-height) + var(--safe-area-inset-bottom) + 8px);
+    padding: calc(var(--header-base-height) + var(--safe-area-inset-top) + 16px) 20px calc(80px + env(safe-area-inset-bottom));
+    /* Increased bottom padding for fixed input */
     scroll-behavior: smooth;
     display: block;
     background: #0B0B0B;
@@ -1226,13 +1227,24 @@ textarea {
 
 /* ============ FLOATING CHAT INPUT ============ */
 .chat-input-wrapper {
-    background: transparent;
-    padding: 12px 12px 40px 12px;
-    /* Increased bottom padding to 40px for mobile visibility */
+    position: fixed;
+    /* Fixed to viewport bottom */
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(11, 11, 11, 0.95);
+    /* Semi-transparent background */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    /* Account for safe area */
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    /* Increased margin to 20px to lift it much higher */
+    z-index: 100;
+    /* Above other content */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .chat-input-container {
@@ -1870,14 +1882,6 @@ textarea {
 
     .audio-msg {
         width: min(220px, 60vw);
-    }
-
-    /* CRITICAL: Extra bottom spacing for mobile to prevent input from being hidden */
-    .chat-input-wrapper {
-        padding: 12px 12px 60px 12px !important;
-        /* Much larger bottom padding on mobile */
-        margin-bottom: 30px !important;
-        /* Extra margin to lift it above viewport issues */
     }
 
     .chat-input-container {
