@@ -1227,12 +1227,12 @@ textarea {
 /* ============ FLOATING CHAT INPUT ============ */
 .chat-input-wrapper {
     background: transparent;
-    padding: 12px 12px 24px 12px;
-    /* Increased bottom padding from 12px to 24px */
+    padding: 12px 12px 40px 12px;
+    /* Increased bottom padding to 40px for mobile visibility */
     display: flex;
     justify-content: center;
-    margin-bottom: 8px;
-    /* Added margin to lift it further up */
+    margin-bottom: 20px;
+    /* Increased margin to 20px to lift it much higher */
 }
 
 .chat-input-container {
@@ -1870,6 +1870,14 @@ textarea {
 
     .audio-msg {
         width: min(220px, 60vw);
+    }
+
+    /* CRITICAL: Extra bottom spacing for mobile to prevent input from being hidden */
+    .chat-input-wrapper {
+        padding: 12px 12px 60px 12px !important;
+        /* Much larger bottom padding on mobile */
+        margin-bottom: 30px !important;
+        /* Extra margin to lift it above viewport issues */
     }
 
     .chat-input-container {
