@@ -206,7 +206,29 @@ const Chat = () => {
     socketRef.current.on('receive_message', (msg) => {
       if (!msg) return;
       const incomingId = msg._id || msg.id || msg.clientTempId;
+      const userStr = localStorage.getItem('user');
+      let myUserId = null;
+      if (userStr) {
+        try {
+          const userObj = JSON.parse(userStr);
+          myUserId = userObj.id || userObj._id || null;
+        } catch (_) { }
+      }
+      const isOwnSender = (myUserId && String(msg.sender) === String(myUserId)) || msg.senderName === myUsername;
+
       setMessages(prev => {
+        // If this is our own message echoed back, update temp id and skip duplicate
+        if (isOwnSender) {
+          const tempId = msg.clientTempId;
+          if (tempId && prev.some(m => m._id === tempId)) {
+            return prev.map(m => (m._id === tempId ? { ...m, _id: incomingId || m._id } : m));
+          }
+          if (incomingId && prev.some(m => m._id === incomingId || m.id === incomingId)) {
+            return prev;
+          }
+          return prev;
+        }
+
         if (incomingId && prev.some(m => m._id === incomingId || m.id === incomingId)) {
           return prev;
         }
