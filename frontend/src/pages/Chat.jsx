@@ -611,6 +611,12 @@ const Chat = () => {
 
     if (overrideType === 'text') {
       setInputValue('');
+      // Keep keyboard open by refocusing input immediately (sticky keyboard behavior)
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 0);
       if (socketRef.current) {
         socketRef.current.emit('stop_typing', roomId);
       }
