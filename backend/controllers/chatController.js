@@ -158,7 +158,7 @@ exports.checkMatch = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
     try {
-        const { roomId, message, messageType = 'text', fileUrl } = req.body;
+        const { roomId, message, messageType = 'text', fileUrl, replyTo } = req.body;
 
         // Validation
         if (!roomId) {
@@ -190,17 +190,40 @@ exports.sendMessage = async (req, res) => {
         const partnerIdStr = roomId.split('-').find(id => id !== user._id.toString());
         console.log('[SendMessage] Partner ID:', partnerIdStr);
 
+        const replyToPayload = replyTo && (replyTo.text || replyTo.message || replyTo.sender || replyTo._id || replyTo.id)
+            ? {
+                messageId: replyTo._id || replyTo.id || replyTo.messageId || undefined,
+                sender: replyTo.sender || '',
+                text: replyTo.text || replyTo.message || ''
+            }
+            : undefined;
+
         const newMessage = await Message.create({
             sender: user._id,
             receiver: partnerIdStr,
             roomId: roomId,
             content: messageType === 'text' ? message : '',
             messageType: messageType,
-            fileUrl: messageType !== 'text' ? fileUrl : null
+            fileUrl: messageType !== 'text' ? fileUrl : null,
+            replyTo: replyToPayload
         });
 
         // Update activity
         await updateActivity(user._id);
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(roomId).emit('receive_message', {
+                _id: newMessage._id,
+                sender: newMessage.sender,
+                senderName: user.username || user.name || 'User',
+                text: newMessage.content || '',
+                messageType: newMessage.messageType,
+                fileUrl: newMessage.fileUrl || null,
+                replyTo: newMessage.replyTo || null,
+                timestamp: newMessage.createdAt
+            });
+        }
 
         res.json(newMessage);
 
@@ -364,11 +387,18 @@ exports.deleteMessage = async (req, res) => {
 
         // Soft delete
         message.isDeleted = true;
+        message.deletedForEveryone = true;
         // Optional: clear content for privacy if it's an unsend
         message.content = 'Message unsent';
         message.fileUrl = null;
 
         await message.save();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(message.roomId).emit('message_unsent', messageId);
+            io.to(message.roomId).emit('message_deleted', messageId);
+        }
 
         res.json({ success: true, message: 'Message unsent' });
     } catch (error) {

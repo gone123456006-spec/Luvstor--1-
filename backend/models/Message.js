@@ -37,6 +37,24 @@ const messageSchema = new mongoose.Schema({
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    deletedForEveryone: {
+        type: Boolean,
+        default: false
+    },
+    replyTo: {
+        messageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Message'
+        },
+        sender: {
+            type: String,
+            trim: true
+        },
+        text: {
+            type: String,
+            trim: true
+        }
     }
 }, {
     timestamps: true

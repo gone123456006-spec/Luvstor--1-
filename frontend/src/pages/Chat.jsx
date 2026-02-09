@@ -21,6 +21,7 @@ const Chat = () => {
 
   const swipeStartRef = useRef({ x: 0, msgId: null });
   const swipeMessageRef = useRef(null);
+  const swipePointerIdRef = useRef(null);
 
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -182,6 +183,53 @@ const Chat = () => {
       setIsPartnerTyping(false);
     });
 
+    socketRef.current.on('message_deleted', (id) => {
+      setMessages(prev =>
+        prev.map(m =>
+          (m._id === id || m.id === id)
+            ? { ...m, deletedForEveryone: true, isDeleted: true, message: 'Message unsent', text: 'Message unsent', fileUrl: null }
+            : m
+        )
+      );
+    });
+
+    socketRef.current.on('message_unsent', (id) => {
+      setMessages(prev =>
+        prev.map(m =>
+          (m._id === id || m.id === id)
+            ? { ...m, deletedForEveryone: true, isDeleted: true, message: 'Message unsent', text: 'Message unsent', fileUrl: null }
+            : m
+        )
+      );
+    });
+
+    socketRef.current.on('receive_message', (msg) => {
+      if (!msg) return;
+      const incomingId = msg._id || msg.id || msg.clientTempId;
+      setMessages(prev => {
+        if (incomingId && prev.some(m => m._id === incomingId || m.id === incomingId)) {
+          return prev;
+        }
+        const normalized = {
+          _id: incomingId || `socket-${Date.now()}`,
+          sender: msg.senderName || msg.sender || partnerUsername,
+          text: msg.text || msg.message || '',
+          message: msg.text || msg.message || '',
+          messageType: msg.messageType || 'text',
+          fileUrl: msg.fileUrl || null,
+          timestamp: msg.timestamp
+            ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isOwn: false,
+          seen: true,
+          replyTo: msg.replyTo || null,
+          deletedForEveryone: !!msg.deletedForEveryone,
+          isDeleted: !!msg.deletedForEveryone
+        };
+        return [...prev, normalized];
+      });
+    });
+
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -298,14 +346,21 @@ const Chat = () => {
           if (newPartnerMessages.length > 0) {
             const formattedMsgs = newPartnerMessages.map(msg => ({
               message: msg.content != null ? String(msg.content) : '',
+              text: msg.content != null ? String(msg.content) : '',
               messageType: msg.messageType || 'text',
               fileUrl: msg.fileUrl || null,
               isDeleted: !!msg.isDeleted,
+              deletedForEveryone: !!msg.deletedForEveryone || !!msg.isDeleted,
               sender: partnerUsername,
               timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isOwn: false,
               seen: true,
-              _id: msg._id
+              _id: msg._id,
+              replyTo: msg.replyTo ? {
+                _id: msg.replyTo._id || msg.replyTo.id || msg.replyTo.messageId || null,
+                sender: msg.replyTo.sender || partnerUsername,
+                text: msg.replyTo.text || msg.replyTo.message || ''
+              } : null
             }));
 
             setMessages(prev => {
@@ -422,8 +477,10 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Auto-scroll to latest message
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    // Auto-scroll to latest message after layout
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
   }, [messages, isPartnerTyping]);
 
   const handleTyping = (e) => {
@@ -467,8 +524,15 @@ const Chat = () => {
     }
     isSendingRef.current = true;
 
+    const replyPayload = replyingTo ? {
+      _id: replyingTo._id,
+      sender: replyingTo.sender,
+      text: replyingTo.message
+    } : null;
+
     const messageData = {
       sender: myUsername,
+      text: overrideType === 'text' ? contentToSend : '',
       message: overrideType === 'text' ? contentToSend : '',
       messageType: overrideType,
       fileUrl: overrideFileUrl,
@@ -478,14 +542,34 @@ const Chat = () => {
       }),
       seen: false,
       isOwn: true,
-      _id: 'temp-' + Date.now()
+      _id: 'temp-' + Date.now(),
+      replyTo: replyPayload,
+      deletedForEveryone: false
     };
 
     // Store message for potential retry
-    failedMessageRef.current = { roomId, message: contentToSend, messageType: overrideType, fileUrl: overrideFileUrl, messageData };
+    failedMessageRef.current = {
+      roomId,
+      message: contentToSend,
+      messageType: overrideType,
+      fileUrl: overrideFileUrl,
+      replyTo: replyPayload,
+      messageData
+    };
 
     setMessages((prev) => [...prev, messageData]);
     setShowEmojiPicker(false);
+    setReplyingTo(null);
+    socketRef.current?.emit('send_message', {
+      roomId,
+      text: contentToSend,
+      messageType: overrideType,
+      fileUrl: overrideFileUrl,
+      replyTo: replyPayload,
+      sender: myUsername,
+      timestamp: messageData.timestamp,
+      clientTempId: messageData._id
+    });
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/messages`, {
@@ -498,12 +582,21 @@ const Chat = () => {
           roomId,
           message: contentToSend,
           messageType: overrideType,
-          fileUrl: overrideFileUrl
+          fileUrl: overrideFileUrl,
+          replyTo: replyPayload
         })
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Server error: ${response.status}`);
+      }
+
+      const saved = await response.json().catch(() => null);
+      const savedId = saved?._id || saved?.message?._id || saved?.data?._id || null;
+      if (savedId) {
+        setMessages(prev =>
+          prev.map(m => (m._id === messageData._id ? { ...m, _id: savedId } : m))
+        );
       }
 
       // Success - clear failed message reference and reply context
@@ -532,7 +625,8 @@ const Chat = () => {
                   roomId: failedMessageRef.current.roomId,
                   message: failedMessageRef.current.message,
                   messageType: failedMessageRef.current.messageType,
-                  fileUrl: failedMessageRef.current.fileUrl
+                  fileUrl: failedMessageRef.current.fileUrl,
+                  replyTo: failedMessageRef.current.replyTo
                 })
               });
 
@@ -701,6 +795,14 @@ const Chat = () => {
     if (messageId.startsWith('temp-')) return; // Can't delete unsynced messages yet
 
     try {
+      // Optimistic UI update for both sides
+      setMessages(prev => prev.map(msg =>
+        msg._id === messageId
+          ? { ...msg, isDeleted: true, deletedForEveryone: true, message: 'Message unsent', text: 'Message unsent', fileUrl: null }
+          : msg
+      ));
+
+      socketRef.current?.emit('unsend_message', { roomId, messageId });
       const response = await fetch(`${BACKEND_URL}/api/chat/messages/${messageId}`, {
         method: 'DELETE',
         ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
@@ -708,70 +810,74 @@ const Chat = () => {
 
       if (!response.ok) throw new Error('Delete failed');
 
-      setMessages(prev => prev.map(msg =>
-        msg._id === messageId ? { ...msg, isDeleted: true, message: 'Message unsent', fileUrl: null } : msg
-      ));
       setContextMenuMsgId(null);
     } catch (error) {
       console.error('Delete error:', error);
-      showError('Delete Failed', 'Could not unsend message.');
+      // Suppress user-facing error toast for unsend
     }
   };
 
-  const SWIPE_THRESHOLD = 60;
-  const SWIPE_MAX = 80;
+  const SWIPE_THRESHOLD = 50;
+  const SWIPE_MAX = 70;
 
-  const getSwipeTranslate = (msgId, isOwn) => {
+  const getSwipeDirection = (msg) => (msg.isOwn ? -1 : 1);
+
+  // Clamp translateX based on sender/receiver direction
+  const getSwipeTranslate = (msgId) => {
     if (!activeSwipe || activeSwipe.messageId !== msgId) return 0;
-    const x = Math.max(-SWIPE_MAX, activeSwipe.translateX);
-    return isOwn ? -x : x;
+    const msg = swipeMessageRef.current;
+    if (!msg) return 0;
+    const direction = getSwipeDirection(msg);
+    const clamped = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, activeSwipe.translateX));
+    return direction > 0 ? Math.max(0, clamped) : Math.min(0, clamped);
+  };
+
+  const getReplyIconOpacity = (msgId) => {
+    if (!activeSwipe || activeSwipe.messageId !== msgId) return 0;
+    const absX = Math.abs(Math.min(0, activeSwipe.translateX));
+    return Math.min(1, absX / SWIPE_THRESHOLD);
   };
 
   const handleSwipeStart = (e, msg) => {
-    if (msg.system) return;
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    if (msg.system || msg.isDeleted) return;
+    const x = e.clientX;
     swipeStartRef.current = { x, msgId: msg._id };
     swipeMessageRef.current = msg;
-    if (!e.touches) {
-      const onMouseMove = (e2) => {
-        if (swipeStartRef.current.msgId !== msg._id) return;
-        const deltaX = e2.clientX - swipeStartRef.current.x;
-        if (Math.abs(deltaX) < 10) return;
-        setActiveSwipe({ messageId: msg._id, translateX: deltaX });
-      };
-      const onMouseUp = () => {
-        handleSwipeEnd();
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      };
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    }
+    swipePointerIdRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handleSwipeMove = (e, msg) => {
-    if (msg.system || swipeStartRef.current.msgId !== msg._id) return;
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    if (msg.system || msg.isDeleted || swipeStartRef.current.msgId !== msg._id) return;
+    if (swipePointerIdRef.current !== e.pointerId) return;
+    const x = e.clientX;
     const deltaX = x - swipeStartRef.current.x;
-    if (Math.abs(deltaX) < 10) return;
-    setActiveSwipe({ messageId: msg._id, translateX: deltaX });
+    if (Math.abs(deltaX) < 8) return;
+    const direction = getSwipeDirection(msg);
+    const directionalDelta = direction > 0 ? Math.max(0, deltaX) : Math.min(0, deltaX);
+    setActiveSwipe({ messageId: msg._id, translateX: directionalDelta });
   };
 
   const handleSwipeEnd = () => {
     const msg = swipeMessageRef.current;
     if (!msg) return;
-    const current = activeSwipe && activeSwipe.messageId === msg._id ? activeSwipe.translateX : 0;
-    if (current <= -SWIPE_THRESHOLD) {
+    const raw = activeSwipe && activeSwipe.messageId === msg._id ? activeSwipe.translateX : 0;
+    const direction = getSwipeDirection(msg);
+    const clamped = direction > 0
+      ? Math.min(SWIPE_MAX, Math.max(0, raw))
+      : Math.max(-SWIPE_MAX, Math.min(0, raw));
+    if (Math.abs(clamped) >= SWIPE_THRESHOLD) {
       setReplyingTo({
         _id: msg._id,
-        message: msg.messageType === 'text' ? (msg.message || '') : (msg.messageType === 'image' ? 'Photo' : 'Audio'),
+        message: msg.messageType === 'text' ? (msg.message || msg.text || '') : (msg.messageType === 'image' ? 'Photo' : 'Audio'),
         sender: msg.isOwn ? myUsername : partnerUsername
       });
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
     setActiveSwipe(null);
     swipeStartRef.current = { x: 0, msgId: null };
     swipeMessageRef.current = null;
+    swipePointerIdRef.current = null;
   };
 
   const handleReplyCancel = () => {
@@ -815,11 +921,40 @@ const Chat = () => {
     }, 1500);
   };
 
+  const resolveFileUrl = (url) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+  };
+
+  const TextMessage = ({ text, isDeleted }) => (
+    <p className={isDeleted ? 'deleted-text' : ''}>{text}</p>
+  );
+
+  const ImageMessage = ({ src }) => (
+    <div className="message-media image" aria-label="Image message">
+      <img
+        className="message-image"
+        src={src}
+        alt="Shared photo"
+        loading="lazy"
+        onClick={() => window.open(src, '_blank', 'noopener,noreferrer')}
+      />
+    </div>
+  );
+
+  const AudioMessage = ({ src }) => (
+    <div className="message-media audio">
+      <audio className="message-audio" controls src={src} />
+    </div>
+  );
+
+
   return (
-    <div
-      ref={chatContainerRef}
-      className={`chat-container ${showEmojiPicker ? 'emoji-open' : ''} ${isKeyboardOpen ? 'keyboard-open' : ''} ${isSkipping ? 'skipping' : ''}`}
-    >
+    <div className="chat-page">
+      <div
+        ref={chatContainerRef}
+        className={`chat-container ${showEmojiPicker ? 'emoji-open' : ''} ${isKeyboardOpen ? 'keyboard-open' : ''} ${isSkipping ? 'skipping' : ''}`}
+      >
       {isSkipping && (
         <div className="skip-overlay">
           <div className="skip-modal">
@@ -858,75 +993,94 @@ const Chat = () => {
       </div>
 
       {/* MESSAGES */}
-      <div className={`chat-body ${isKeyboardOpen ? 'keyboard-open' : ''}`} ref={chatBodyRef}>
-        {messages.map((msg, idx) => (
+      <div className={`chat-body chat-wallpaper-dark ${isKeyboardOpen ? 'keyboard-open' : ''}`} ref={chatBodyRef}>
+        <div className="chat-thread">
+          {messages.map((msg, idx) => {
+            const key = msg._id || `${msg.timestamp || 'msg'}-${idx}`;
+            const isSystem = !!msg.system;
+            const isSent = !!msg.isOwn;
+            const isDeleted = !!msg.isDeleted || !!msg.deletedForEveryone;
+            const hasMedia = msg.messageType && msg.messageType !== 'text';
+            const fileUrl = msg.fileUrl ? resolveFileUrl(msg.fileUrl) : '';
+
+            return (
           <div
-            key={msg._id || idx}
-            className={`message-swipe-row ${msg.system ? 'system-row' : msg.isOwn ? 'own-row' : 'other-row'}`}
-            onTouchStart={(e) => handleSwipeStart(e, msg)}
-            onTouchMove={(e) => handleSwipeMove(e, msg)}
-            onTouchEnd={(e) => handleSwipeEnd()}
-            onMouseDown={(e) => handleSwipeStart(e, msg)}
+            key={key}
+            className={`message-row ${isSystem ? 'system' : isSent ? 'sent' : 'received'}`}
+            onPointerDown={(e) => handleSwipeStart(e, msg)}
+            onPointerMove={(e) => handleSwipeMove(e, msg)}
+            onPointerUp={() => handleSwipeEnd()}
+            onPointerCancel={() => handleSwipeEnd()}
           >
-            {!msg.system && (
-              <div className="swipe-reveal">
-                <Reply size={18} />
-                <span>Reply</span>
-              </div>
-            )}
             <div
-              className={`bubble ${msg.isOwn ? 'own' : msg.system ? 'system' : 'other'} ${msg.messageType !== 'text' ? 'media-bubble' : ''} ${msg.isDeleted ? 'deleted' : ''}`}
-              style={!msg.system ? { transform: `translateX(${getSwipeTranslate(msg._id, msg.isOwn)}px)` } : undefined}
+              className={`message-bubble ${isSent ? 'sent' : isSystem ? 'system' : 'received'} ${hasMedia ? 'media' : ''} ${isDeleted ? 'deleted' : ''} ${contextMenuMsgId === msg._id ? 'show-unsend' : ''}`}
+              style={!isSystem ? {
+                transform: `translateX(${getSwipeTranslate(msg._id)}px)`,
+                transition: activeSwipe?.messageId === msg._id ? 'none' : 'transform 0.25s ease'
+              } : undefined}
               onClick={(e) => {
-                if (msg.isOwn && !msg.isDeleted && !msg.system) {
+                if (!isDeleted && !isSystem) {
                   e.stopPropagation();
                   setContextMenuMsgId(contextMenuMsgId === msg._id ? null : msg._id);
                 }
               }}
             >
-              {msg.system ? (
-                <p>{msg.message}</p>
+              {isSystem ? (
+                <TextMessage text={msg.message || msg.text} />
               ) : (
                 <div className="bubble-content">
-                  {msg.isOwn && contextMenuMsgId === msg._id && (
-                    <button
-                      className="unsend-btn"
-                      onClick={() => handleDeleteMessage(msg._id)}
-                    >
-                      Unsend
-                    </button>
-                  )}
-                {msg.messageType === 'image' && !msg.isDeleted && msg.fileUrl && (
-                  <div className="media-container image-msg">
-                    <img
-                      src={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${BACKEND_URL}${msg.fileUrl}`}
-                      alt="Shared photo"
-                      loading="lazy"
-                      onClick={() => window.open(msg.fileUrl.startsWith('http') ? msg.fileUrl : `${BACKEND_URL}${msg.fileUrl}`, '_blank')}
-                    />
-                  </div>
-                )}
-                {msg.messageType === 'audio' && !msg.isDeleted && msg.fileUrl && (
-                  <div className="media-container audio-msg">
-                    <div className="audio-player-wrapper">
-                      <audio controls src={msg.fileUrl.startsWith('http') ? msg.fileUrl : `${BACKEND_URL}${msg.fileUrl}`} />
+                  {contextMenuMsgId === msg._id && (
+                    <div className="unsend-popup">
+                      <button
+                        className="unsend-btn"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg._id); }}
+                      >
+                        Unsend
+                      </button>
                     </div>
-                  </div>
-                )}
-                  {(msg.messageType === 'text' || msg.isDeleted) && (
-                    <p className={msg.isDeleted ? 'deleted-text' : ''}>{msg.message}</p>
                   )}
-                  {!msg.system && (
-                    <span className="message-time">
+                  {msg.deletedForEveryone ? (
+                    <div className="deleted-msg">This message was deleted</div>
+                  ) : (
+                    <>
+                      {msg.replyTo && !isDeleted && (
+                        <div className="quoted">
+                          <div className="quoted-author">{msg.replyTo.sender}</div>
+                          <div className="quoted-text">{msg.replyTo.text}</div>
+                        </div>
+                      )}
+                      {msg.messageType === 'image' && !isDeleted && fileUrl && (
+                        <ImageMessage src={fileUrl} />
+                      )}
+                      {msg.messageType === 'audio' && !isDeleted && fileUrl && (
+                        <AudioMessage src={fileUrl} />
+                      )}
+                      {((!msg.messageType || msg.messageType === 'text') || isDeleted) && (
+                        <TextMessage text={msg.message || msg.text} isDeleted={isDeleted} />
+                      )}
+                    </>
+                  )}
+                  {!isSystem && (
+                    <span className="message-time" aria-label={`Sent at ${msg.timestamp}`}>
                       {msg.timestamp}
-                      {msg.isOwn && msg.seen && !msg.isDeleted && ' ✓✓'}
+                      {isSent && msg.seen && !isDeleted && ' ✓✓'}
                     </span>
                   )}
                 </div>
               )}
             </div>
+            {!isSystem && !isDeleted && (
+              <div
+                className="swipe-reply-icon"
+                style={{ opacity: getReplyIconOpacity(msg._id) }}
+              >
+                <Reply size={16} />
+              </div>
+            )}
           </div>
-        ))}
+            );
+          })}
+        </div>
 
         {isPartnerTyping && (
           <div className="typing-bubble">
@@ -936,141 +1090,141 @@ const Chat = () => {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="messages-end-anchor" />
       </div>
 
       {/* INPUT */}
       <div
-        className={`chat-input-container ${showEmojiPicker ? 'emoji-open' : ''} ${isRecording ? 'is-recording' : ''}`}
+        className={`chat-input-container ${showEmojiPicker ? 'emoji-open' : ''} ${isRecording ? 'is-recording' : ''} ${replyingTo ? 'has-reply' : ''}`}
         style={{
           opacity: (partnerStatus === 'left' || isSkipping) ? 0.6 : 1,
           pointerEvents: isSkipping ? 'none' : 'auto'
         }}
       >
         {replyingTo && (
-          <div className="reply-bar">
-            <div className="reply-bar-content">
-              <Reply size={14} className="reply-bar-icon" />
-              <div className="reply-bar-preview">
-                <span className="reply-bar-sender">{replyingTo.sender}</span>
-                <span className="reply-bar-text">{replyingTo.message.length > 40 ? replyingTo.message.slice(0, 40) + '…' : replyingTo.message}</span>
-              </div>
+          <div className="reply-preview-input">
+            <div className="reply-preview-accent" />
+            <div className="reply-preview-body">
+              <span className="reply-author">{replyingTo.sender}</span>
+              <span className="reply-text">{replyingTo.message.length > 50 ? replyingTo.message.slice(0, 50) + '...' : replyingTo.message}</span>
             </div>
-            <button type="button" className="reply-bar-close" onClick={handleReplyCancel} aria-label="Cancel reply">
-              <X size={18} />
+            <button type="button" className="reply-preview-close" onClick={handleReplyCancel} aria-label="Cancel reply">
+              <X size={16} />
             </button>
           </div>
         )}
-        <div className="instagram-input-pill">
-          <button
-            className="camera-btn-circle"
-            onClick={openCamera}
-            type="button"
-            disabled={partnerStatus === 'left' || isUploading || isRecording}
-            title="Take Photo"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffffff" className="bi bi-camera" viewBox="0 0 16 16">
-              <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z" />
-              <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0" />
-            </svg>
-          </button>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept="image/*"
-            onChange={onFileChange}
-          />
-
-          <div className="input-field-wrapper">
-            {isRecording ? (
-              <div className="recording-wave-container">
-                <span className="recording-dot"></span>
-                <span className="recording-timer">{formatTime(recordingTime)}</span>
-                <span className="recording-text">Recording...</span>
-              </div>
-            ) : (
-              <input
-                type="text"
-                placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Message..."}
-                value={inputValue}
-                onChange={handleTyping}
-                ref={inputRef}
-                disabled={isUploading}
-                onFocus={(e) => {
-                  setShowEmojiPicker(false);
-                  setTimeout(() => {
-                    e.target.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'center',
-                      inline: 'nearest'
-                    });
-                  }, 300);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (partnerStatus === 'left') {
-                      e.preventDefault();
-                      handleNext();
-                    } else {
-                      sendMessage();
-                    }
-                  }
-                }}
-              />
-            )}
-            {isUploading && <div className="upload-loader"></div>}
-          </div>
-
-          <div className="pill-actions-right">
-            {(!inputValue.trim() && partnerStatus !== 'left') && (
-              <>
-                <button
-                  className={`action-icon-btn mic-btn ${isRecording ? 'recording' : ''}`}
-                  onClick={isRecording ? stopRecording : startRecording}
-                  type="button"
-                  disabled={isUploading}
-                  title={isRecording ? 'Stop Recording' : 'Record Audio'}
-                >
-                  {isRecording ? <Square size={22} fill="#ff4444" color="#ff4444" /> : <Mic size={22} />}
-                </button>
-
-                <button
-                  className="action-icon-btn gallery-btn"
-                  onClick={handlePhotoClick}
-                  type="button"
-                  disabled={partnerStatus === 'left' || isUploading || isRecording}
-                  title="Send Image"
-                >
-                  <ImageIcon size={22} />
-                </button>
-              </>
-            )}
-
+        <div className="chat-input-row">
+          <div className="instagram-input-pill">
             <button
-              className="action-icon-btn emoji-btn"
-              onClick={toggleEmojiPicker}
+              className="camera-btn-circle"
+              onClick={openCamera}
               type="button"
-              disabled={partnerStatus === 'left' || isRecording}
-              title="Emoji"
+              disabled={partnerStatus === 'left' || isUploading || isRecording}
+              title="Take Photo"
             >
-              <Smile size={22} />
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ffffff" className="bi bi-camera" viewBox="0 0 16 16">
+                <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z" />
+                <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0" />
+              </svg>
             </button>
-          </div>
-        </div>
 
-        {(inputValue.trim() || partnerStatus === 'left') && (
-          <button
-            onClick={() => partnerStatus === 'left' ? handleNext() : sendMessage()}
-            className="instagram-send-btn"
-            type="button"
-            disabled={isUploading}
-            title={partnerStatus === 'left' ? 'Find new match' : 'Send'}
-          >
-            {partnerStatus === 'left' ? <ChevronRight /> : "Send"}
-          </button>
-        )}
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept="image/*"
+              onChange={onFileChange}
+            />
+
+            <div className="input-field-wrapper">
+              {isRecording ? (
+                <div className="recording-wave-container">
+                  <span className="recording-dot"></span>
+                  <span className="recording-timer">{formatTime(recordingTime)}</span>
+                  <span className="recording-text">Recording...</span>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder={partnerStatus === 'left' ? "Press Enter to find match..." : "Chat on Luvstor..."}
+                  value={inputValue}
+                  onChange={handleTyping}
+                  ref={inputRef}
+                  disabled={isUploading}
+                  onFocus={(e) => {
+                    setShowEmojiPicker(false);
+                    setTimeout(() => {
+                      e.target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'nearest'
+                      });
+                    }, 300);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (partnerStatus === 'left') {
+                        e.preventDefault();
+                        handleNext();
+                      } else {
+                        sendMessage();
+                      }
+                    }
+                  }}
+                />
+              )}
+              {isUploading && <div className="upload-loader"></div>}
+            </div>
+
+            <div className="pill-actions-right">
+              {(!inputValue.trim() && partnerStatus !== 'left') && (
+                <>
+                  <button
+                    className={`action-icon-btn mic-btn ${isRecording ? 'recording' : ''}`}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    type="button"
+                    disabled={isUploading}
+                    title={isRecording ? 'Stop Recording' : 'Record Audio'}
+                  >
+                    {isRecording ? <Square size={22} fill="#ff4444" color="#ff4444" /> : <Mic size={22} />}
+                  </button>
+
+                  <button
+                    className="action-icon-btn gallery-btn"
+                    onClick={handlePhotoClick}
+                    type="button"
+                    disabled={partnerStatus === 'left' || isUploading || isRecording}
+                    title="Send Image"
+                  >
+                    <ImageIcon size={22} />
+                  </button>
+                </>
+              )}
+
+              <button
+                className="action-icon-btn emoji-btn"
+                onClick={toggleEmojiPicker}
+                type="button"
+                disabled={partnerStatus === 'left' || isRecording}
+                title="Emoji"
+              >
+                <Smile size={22} />
+              </button>
+            </div>
+          </div>
+
+          {(inputValue.trim() || partnerStatus === 'left') && (
+            <button
+              onClick={() => partnerStatus === 'left' ? handleNext() : sendMessage()}
+              className="instagram-send-btn"
+              type="button"
+              disabled={isUploading}
+              title={partnerStatus === 'left' ? 'Find new match' : 'Send'}
+            >
+              {partnerStatus === 'left' ? <ChevronRight /> : "Send"}
+            </button>
+          )}
+        </div>
       </div>
 
       {showEmojiPicker && (
@@ -1147,6 +1301,7 @@ const Chat = () => {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 };

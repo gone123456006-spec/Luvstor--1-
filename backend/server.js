@@ -83,6 +83,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const socketIo = require('socket.io');
+const Message = require('./models/Message');
 
 // Initialize Socket.io with the existing server instance
 const io = socketIo(server, {
@@ -111,10 +112,49 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('stop_typing');
   });
 
+  socket.on('send_message', (data) => {
+    try {
+      const roomId = data?.roomId || data?.room;
+      if (!roomId) return;
+      socket.to(roomId).emit('receive_message', data);
+    } catch (error) {
+      console.error('Socket send_message error:', error);
+    }
+  });
+
+  socket.on('unsend_message', async (payload) => {
+    try {
+      const messageId = payload?.messageId || payload;
+      if (!messageId) return;
+
+      const message = await Message.findById(messageId);
+      if (!message) return;
+
+      message.isDeleted = true;
+      message.deletedForEveryone = true;
+      message.content = 'Message unsent';
+      message.fileUrl = null;
+      await message.save();
+
+      const roomId = payload?.roomId || message.roomId;
+      if (roomId) {
+        io.to(roomId).emit('message_unsent', messageId);
+        io.to(roomId).emit('message_deleted', messageId);
+      } else {
+        io.emit('message_unsent', messageId);
+        io.emit('message_deleted', messageId);
+      }
+    } catch (error) {
+      console.error('Socket unsend error:', error);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
 });
+
+app.set('io', io);
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
