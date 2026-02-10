@@ -17,14 +17,22 @@ const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|gif|mp3|wav|m4a|ogg|webm/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
+        // More robust check: allow ANY audio mime type, plus video/mp4 (often used for audio containers on mobile)
+        if (file.mimetype.startsWith('audio/') ||
+            file.mimetype === 'video/mp4' ||
+            file.mimetype === 'video/webm') {
             return cb(null, true);
         }
-        cb(new Error('Only images and audio files are allowed!'));
+
+        // Fallback to extension check for weird mime types (like application/octet-stream)
+        const filetypes = /jpeg|jpg|png|gif|mp3|wav|m4a|ogg|webm|mp4|mpeg|aac/;
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+        if (extname) {
+            return cb(null, true);
+        }
+
+        cb(new Error('File format not supported. Please upload audio or images.'));
     }
 }).single('file');
 

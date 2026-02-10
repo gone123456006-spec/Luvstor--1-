@@ -4,7 +4,9 @@ import EmojiPicker from 'emoji-picker-react';
 import { Smile, SkipForward, Send, X, AlertCircle, RefreshCw, ChevronRight, Image as ImageIcon, Mic, Square, Reply } from 'lucide-react';
 import { io } from 'socket.io-client';
 import logo from '../assets/logo.png';
+import AudioWaveform from '../components/AudioWaveform';
 import '../chat.css';
+import '../mobile-optimizations.css';
 
 const Chat = () => {
   const location = useLocation();
@@ -48,6 +50,7 @@ const Chat = () => {
   const consecutiveFailuresRef = useRef(0);
   const isSendingRef = useRef(false);
   const isManualLeave = useRef(false);
+  const processedMessageIds = useRef(new Set());
 
   // Camera Refs and State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -64,23 +67,36 @@ const Chat = () => {
     if (import.meta.env.VITE_BACKEND_URL) {
       return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
     }
-    // If no VITE_BACKEND_URL and currently on localhost, default to localhost:5000
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:5000';
     }
-    // In production without explicit vars, assume relative path /api (or same origin)
-    // Adjust this based on your specific deployment (e.g., render/vercel often need explicit vars)
-    console.warn('VITE_BACKEND_URL not set. Defaulting to relative path /api');
-    return '/api';
+    if (window.location.hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/)) {
+      return `http://${window.location.hostname}:5000`;
+    }
+    // In production without explicit vars, assume relative path (same origin)
+    // Default to empty string so /api/... and /uploads/... resolve from root
+    console.warn('VITE_BACKEND_URL not set. Defaulting to relative path');
+    return '';
   };
 
   const BACKEND_URL = getBackendUrl();
   const token = localStorage.getItem('token');
 
+  // Get current user ID
+  const getCurrentUserId = () => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    try {
+      const userObj = JSON.parse(userStr);
+      return userObj.id || userObj._id || null;
+    } catch {
+      return null;
+    }
+  };
+
   // Helper function to show error notifications
   const showError = (title, message, type = 'error', retryAction = null) => {
     setError({ title, message, type, retryAction });
-    // Auto-hide after 5 seconds for non-critical errors
     if (type !== 'error') {
       setTimeout(() => {
         setError(null);
@@ -110,11 +126,9 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Tracking for remounts (Strict Mode / Fast Refresh)
     window.__chat_mount_id = (window.__chat_mount_id || 0) + 1;
     const currentMountId = window.__chat_mount_id;
 
-    // Handle session end
     const handleSessionEnd = () => {
       if (isManualLeave.current) return;
 
@@ -134,21 +148,18 @@ const Chat = () => {
       window.removeEventListener('beforeunload', handleSessionEnd);
       window.removeEventListener('popstate', handleSessionEnd);
 
-      // Root-cause fix: Only terminate if we didn't remount within 150ms
       setTimeout(() => {
         if (window.__chat_mount_id === currentMountId && !isManualLeave.current) {
           handleSessionEnd();
-
           setMessages([]);
           setPartnerStatus('online');
           setIsPartnerTyping(false);
         }
       }, 150);
     };
-  }, [BACKEND_URL]); // Mount-once logic for session lifecycle
+  }, [BACKEND_URL, token]);
 
   useEffect(() => {
-    // Basic setup on mount
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = 0;
     }
@@ -206,109 +217,49 @@ const Chat = () => {
     socketRef.current.on('receive_message', (msg) => {
       if (!msg) return;
 
-      console.log('[Socket] Received message:', {
-        id: msg._id,
-        sender: msg.sender,
-        senderName: msg.senderName,
-        text: msg.text,
-        clientTempId: msg.clientTempId
-      });
+      const myUserId = getCurrentUserId();
+      const msgSenderId = typeof msg.sender === 'object' ? (msg.sender._id || msg.sender.id) : msg.sender;
+      const isOwnMessage = myUserId && String(msgSenderId) === String(myUserId);
 
-      const incomingId = msg._id || msg.id || msg.clientTempId;
-      const userStr = localStorage.getItem('user');
-      let myUserId = null;
-      if (userStr) {
-        try {
-          const userObj = JSON.parse(userStr);
-          myUserId = userObj.id || userObj._id || null;
-        } catch (_) { }
+      // Skip own messages from socket
+      if (isOwnMessage) {
+        console.log('[Socket] Skipping own message');
+        return;
       }
 
-      // CRITICAL: Only use user ID for comparison, NOT username
-      // myUsername is hardcoded to 'You' but backend sends actual username
-      const isOwnSender = myUserId && String(msg.sender) === String(myUserId);
+      const messageId = msg._id || msg.id;
 
-      console.log('[Socket] Message check:', {
-        myUserId,
-        msgSender: msg.sender,
-        isOwnSender
-      });
+      // Check if already processed
+      if (messageId && processedMessageIds.current.has(messageId)) {
+        console.log('[Socket] Skipping duplicate message:', messageId);
+        return;
+      }
 
-      setMessages(prev => {
-        // If this is our own message echoed back from the server
-        if (isOwnSender) {
-          console.log('[Dedup] Own message received:', { incomingId, clientTempId: msg.clientTempId, text: msg.text });
-          const tempId = msg.clientTempId;
-          // If we have a temp ID and it exists in our messages, update it with the real ID
-          if (tempId && prev.some(m => m._id === tempId)) {
-            console.log('[Dedup] Updating temp ID to real ID:', tempId, '->', incomingId);
-            return prev.map(m => (m._id === tempId ? { ...m, _id: incomingId || m._id } : m));
-          }
-          // If we already have this message by its real ID, skip it
-          if (incomingId && prev.some(m => m._id === incomingId || m.id === incomingId)) {
-            console.log('[Dedup] Skipping - already have message by ID:', incomingId);
-            return prev;
-          }
-          // If no temp ID match and no real ID match, check for duplicate by content and time
-          const msgText = msg.text || msg.message || '';
-          const msgTime = msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now();
-          const hasSimilarRecent = prev.some(m => {
-            if (!m.isOwn || m.text !== msgText) return false;
-            // Compare using raw createdAt if available, otherwise use current time
-            const mTime = m.createdAt ? new Date(m.createdAt).getTime() : Date.now();
-            const timeDiff = Math.abs(msgTime - mTime);
-            console.log('[Dedup] Comparing:', { msgText, msgTime, mTime, timeDiff });
-            return timeDiff < 5000; // Within 5 seconds
-          });
-          if (hasSimilarRecent) {
-            console.log('[Dedup] Skipping - found similar recent message');
-            return prev; // Skip duplicate
-          }
-          // Otherwise, this is a new message from ourselves (shouldn't happen normally)
-          console.log('[Dedup] No match found - skipping own message');
-          return prev;
-        }
+      // Mark as processed
+      if (messageId) {
+        processedMessageIds.current.add(messageId);
+      }
 
-        // For partner messages, check for duplicates by ID
-        console.log('[Socket] Partner message - checking for duplicates');
-        if (incomingId && prev.some(m => m._id === incomingId || m.id === incomingId)) {
-          console.log('[Socket] Skipping duplicate partner message by ID:', incomingId);
-          return prev;
-        }
+      // Add partner message
+      const normalized = {
+        _id: messageId || `socket-${Date.now()}`,
+        sender: msg.senderName || partnerUsername,
+        text: msg.text || msg.message || '',
+        message: msg.text || msg.message || '',
+        messageType: msg.messageType || 'text',
+        fileUrl: msg.fileUrl || null,
+        timestamp: msg.timestamp
+          ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: msg.timestamp || new Date().toISOString(),
+        isOwn: false,
+        seen: true,
+        replyTo: msg.replyTo || null,
+        deletedForEveryone: !!msg.deletedForEveryone,
+        isDeleted: !!msg.deletedForEveryone
+      };
 
-        // ADDITIONAL CHECK: Also check by text and timestamp to catch any missed duplicates
-        const msgText = msg.text || msg.message || '';
-        const hasSimilarMessage = prev.some(m =>
-          !m.isOwn &&
-          m.text === msgText &&
-          Math.abs(Date.now() - new Date(m.createdAt || 0).getTime()) < 10000 // 10 seconds
-        );
-        if (hasSimilarMessage) {
-          console.log('[Socket] Skipping duplicate partner message by content:', msgText);
-          return prev;
-        }
-
-        // Add new partner message
-        console.log('[Socket] Adding new partner message:', { id: incomingId, text: msgText });
-        const normalized = {
-          _id: incomingId || `socket-${Date.now()}`,
-          sender: msg.senderName || msg.sender || partnerUsername,
-          text: msg.text || msg.message || '',
-          message: msg.text || msg.message || '',
-          messageType: msg.messageType || 'text',
-          fileUrl: msg.fileUrl || null,
-          timestamp: msg.timestamp
-            ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          createdAt: msg.timestamp || new Date().toISOString(), // Store raw timestamp
-          isOwn: false,
-          seen: true,
-          replyTo: msg.replyTo || null,
-          deletedForEveryone: !!msg.deletedForEveryone,
-          isDeleted: !!msg.deletedForEveryone
-        };
-        return [...prev, normalized];
-      });
+      setMessages(prev => [...prev, normalized]);
     });
 
     return () => {
@@ -316,11 +267,10 @@ const Chat = () => {
         socketRef.current.disconnect();
       }
     };
-  }, [roomId, BACKEND_URL]);
+  }, [roomId, BACKEND_URL, partnerUsername]);
 
   useEffect(() => {
     const fetchUpdates = async () => {
-      // Don't poll if we're already transitioning or if we have no room
       if (isSkipping || isManualLeave.current || !roomId) return;
 
       try {
@@ -331,7 +281,6 @@ const Chat = () => {
 
         if (!response.ok) {
           if (response.status >= 500) {
-            // Server error
             consecutiveFailuresRef.current += 1;
             if (consecutiveFailuresRef.current === 1) {
               showError('Connection Issue', 'Server is temporarily unavailable. Retrying...', 'warning');
@@ -341,7 +290,6 @@ const Chat = () => {
           return;
         }
 
-        // Reset failure counter on success
         consecutiveFailuresRef.current = 0;
         if (error && error.title === 'Connection Issue') {
           setError(null);
@@ -357,20 +305,12 @@ const Chat = () => {
               { system: true, message: 'Partner left' }
             ]);
 
-            // Show notification that partner left
-            showError(
-              'Partner Left',
-              'Finding new match',
-              'info'
-            );
+            showError('Partner Left', 'Finding new match', 'info');
 
-            // Automatically navigate to match page after 2 seconds
             setTimeout(() => {
               if (isSkipping || isManualLeave.current) return;
 
               isManualLeave.current = true;
-
-              // Clear all state
               setMessages([]);
               setPartnerStatus('online');
               setIsPartnerTyping(false);
@@ -380,17 +320,14 @@ const Chat = () => {
               consecutiveFailuresRef.current = 0;
               failedMessageRef.current = null;
 
-              // Clear session storage
               sessionStorage.removeItem('chat_messages');
               sessionStorage.removeItem('chat_room');
 
-              // Notify backend we're leaving
               fetch(`${BACKEND_URL}/api/chat/leave`, {
                 method: 'POST',
                 ...(token && { headers: { 'Authorization': `Bearer ${token}` } })
               }).catch(() => { });
 
-              // Navigate to match page
               navigate('/match', { replace: true });
             }, 2000);
           }
@@ -398,80 +335,59 @@ const Chat = () => {
         }
 
         if (data.messages && data.messages.length > 0) {
-          console.log('[Frontend Poll] Received', data.messages.length, 'messages');
-
-          const valUser = localStorage.getItem('user');
-          const myUserId = valUser ? (() => {
-            try {
-              const userObj = JSON.parse(valUser);
-              return userObj.id || userObj._id;
-            } catch (_) { return null; }
-          })() : null;
+          const myUserId = getCurrentUserId();
 
           const newPartnerMessages = data.messages.filter(msg => {
             if (msg.isDeleted) return false;
-            if (!myUserId) return true; // No user: treat all as from partner
-            let msgSenderId;
-            if (typeof msg.sender === 'object' && msg.sender !== null) {
-              msgSenderId = msg.sender._id || msg.sender.id || msg.sender;
-            } else {
-              msgSenderId = msg.sender;
-            }
-            const msgSenderStr = String(msgSenderId);
-            const myUserIdStr = String(myUserId);
-            return msgSenderStr !== myUserIdStr;
+
+            const msgSenderId = typeof msg.sender === 'object'
+              ? (msg.sender._id || msg.sender.id || msg.sender)
+              : msg.sender;
+
+            return myUserId ? String(msgSenderId) !== String(myUserId) : true;
           });
 
-          console.log('[Frontend Poll] Partner messages:', newPartnerMessages.length);
-
           if (newPartnerMessages.length > 0) {
-            console.log('[Poll] Processing partner messages:', newPartnerMessages.map(m => ({ id: m._id, text: m.content })));
-
-            const formattedMsgs = newPartnerMessages.map(msg => {
-              const msgTimestamp = msg.createdAt || msg.timestamp || new Date().toISOString();
-              return {
-                message: msg.content != null ? String(msg.content) : '',
-                text: msg.content != null ? String(msg.content) : '',
-                messageType: msg.messageType || 'text',
-                fileUrl: msg.fileUrl || null,
-                isDeleted: !!msg.isDeleted,
-                deletedForEveryone: !!msg.deletedForEveryone || !!msg.isDeleted,
-                sender: partnerUsername,
-                timestamp: new Date(msgTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                createdAt: msgTimestamp, // Store raw timestamp
-                isOwn: false,
-                seen: true,
-                _id: msg._id,
-                replyTo: msg.replyTo ? {
-                  _id: msg.replyTo._id || msg.replyTo.id || msg.replyTo.messageId || null,
-                  sender: msg.replyTo.sender || partnerUsername,
-                  text: msg.replyTo.text || msg.replyTo.message || ''
-                } : null
-              };
-            });
-
-            setMessages(prev => {
-              const existingIds = new Set(prev.map(p => p._id));
-              console.log('[Poll] Existing message IDs:', Array.from(existingIds));
-              const uniqueNew = formattedMsgs.filter(m => {
-                const isDuplicate = existingIds.has(m._id);
-                if (isDuplicate) {
-                  console.log('[Poll] Skipping duplicate message:', m._id, m.text);
+            const formattedMsgs = newPartnerMessages
+              .filter(msg => {
+                const messageId = msg._id;
+                if (processedMessageIds.current.has(messageId)) {
+                  return false;
                 }
-                return !isDuplicate;
+                processedMessageIds.current.add(messageId);
+                return true;
+              })
+              .map(msg => {
+                const msgTimestamp = msg.createdAt || msg.timestamp || new Date().toISOString();
+                return {
+                  message: msg.content != null ? String(msg.content) : '',
+                  text: msg.content != null ? String(msg.content) : '',
+                  messageType: msg.messageType || 'text',
+                  fileUrl: msg.fileUrl || null,
+                  isDeleted: !!msg.isDeleted,
+                  deletedForEveryone: !!msg.deletedForEveryone || !!msg.isDeleted,
+                  sender: partnerUsername,
+                  timestamp: new Date(msgTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  createdAt: msgTimestamp,
+                  isOwn: false,
+                  seen: true,
+                  _id: msg._id,
+                  replyTo: msg.replyTo ? {
+                    _id: msg.replyTo._id || msg.replyTo.id || msg.replyTo.messageId || null,
+                    sender: msg.replyTo.sender || partnerUsername,
+                    text: msg.replyTo.text || msg.replyTo.message || ''
+                  } : null
+                };
               });
-              console.log('[Poll] Adding', uniqueNew.length, 'new messages to UI');
-              if (uniqueNew.length > 0) {
-                console.log('[Poll] New messages:', uniqueNew.map(m => ({ id: m._id, text: m.text })));
-              }
-              return [...prev, ...uniqueNew];
-            });
+
+            if (formattedMsgs.length > 0) {
+              setMessages(prev => [...prev, ...formattedMsgs]);
+            }
           }
 
           const lastMsg = data.messages[data.messages.length - 1];
           lastUpdateRef.current = lastMsg.updatedAt || lastMsg.createdAt;
         }
-
 
         setIsPartnerTyping(data.isPartnerTyping);
 
@@ -479,7 +395,6 @@ const Chat = () => {
         console.error('Polling error:', error);
         consecutiveFailuresRef.current += 1;
 
-        // Only show error after multiple consecutive failures to avoid spam
         if (consecutiveFailuresRef.current === 3) {
           showError(
             'Connection Lost',
@@ -491,20 +406,13 @@ const Chat = () => {
             }
           );
         } else if (consecutiveFailuresRef.current > 10) {
-          // After many failures, suggest reconnecting
-          showError(
-            'Connection Failed',
-            'No server connection',
-            'error'
-          );
+          showError('Connection Failed', 'No server connection', 'error');
         }
       }
     };
 
     const intervalId = setInterval(fetchUpdates, 1000);
     pollingIntervalRef.current = intervalId;
-
-    // Run once immediately
     fetchUpdates();
 
     return () => {
@@ -512,9 +420,8 @@ const Chat = () => {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-      // NO /leave CALL HERE - Lifecycle hook handles it
     };
-  }, [roomId, navigate, BACKEND_URL, token, isSkipping, partnerStatus, error, myUsername, partnerUsername]);
+  }, [roomId, navigate, BACKEND_URL, token, isSkipping, partnerStatus, error, partnerUsername]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -526,46 +433,78 @@ const Chat = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle mobile keyboard visibility
   useEffect(() => {
+    let debounceTimer = null;
+    let lastHeight = window.innerHeight;
+
     const handleKeyboardToggle = () => {
-      // Use Visual Viewport API if available (modern browsers)
-      if (window.visualViewport) {
-        const viewport = window.visualViewport;
-        const windowHeight = window.innerHeight;
-        const viewportHeight = viewport.height;
-
-        // Keyboard is likely open if viewport is significantly smaller than window
-        const keyboardThreshold = 150; // pixels
-        const isOpen = (windowHeight - viewportHeight) > keyboardThreshold;
-
-        setIsKeyboardOpen(isOpen);
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
       }
+
+      debounceTimer = setTimeout(() => {
+        if (window.visualViewport) {
+          const viewport = window.visualViewport;
+          const windowHeight = window.innerHeight;
+          const viewportHeight = viewport.height;
+
+          const keyboardThreshold = 150;
+          const heightDiff = windowHeight - viewportHeight;
+          const isOpen = heightDiff > keyboardThreshold;
+
+          setIsKeyboardOpen(prev => {
+            if (prev !== isOpen) {
+              console.log('[Keyboard] State changed:', isOpen, 'Height diff:', heightDiff);
+              return isOpen;
+            }
+            return prev;
+          });
+
+          lastHeight = viewportHeight;
+        } else {
+          const currentHeight = window.innerHeight;
+          const heightDiff = Math.abs(currentHeight - lastHeight);
+
+          if (heightDiff > 100) {
+            const screenHeight = window.screen.height;
+            const isOpen = currentHeight < screenHeight * 0.75;
+
+            setIsKeyboardOpen(prev => {
+              if (prev !== isOpen) {
+                console.log('[Keyboard Fallback] State changed:', isOpen);
+                return isOpen;
+              }
+              return prev;
+            });
+
+            lastHeight = currentHeight;
+          }
+        }
+      }, 100);
     };
 
-    // Listen to visual viewport changes
+    handleKeyboardToggle();
+
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleKeyboardToggle);
       window.visualViewport.addEventListener('scroll', handleKeyboardToggle);
 
       return () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
         if (window.visualViewport) {
           window.visualViewport.removeEventListener('resize', handleKeyboardToggle);
           window.visualViewport.removeEventListener('scroll', handleKeyboardToggle);
         }
       };
     } else {
-      // Fallback for older browsers
-      const handleResize = () => {
-        const windowHeight = window.innerHeight;
-        const screenHeight = window.screen.height;
-        const isOpen = windowHeight < screenHeight * 0.75;
+      window.addEventListener('resize', handleKeyboardToggle);
+      window.addEventListener('orientationchange', handleKeyboardToggle);
 
-        setIsKeyboardOpen(isOpen);
+      return () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        window.removeEventListener('resize', handleKeyboardToggle);
+        window.removeEventListener('orientationchange', handleKeyboardToggle);
       };
-
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
 
@@ -574,16 +513,21 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    // Auto-scroll to latest message after layout
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
-  }, [messages, isPartnerTyping]);
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    };
+
+    scrollToBottom();
+    const timeoutId = setTimeout(scrollToBottom, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [messages, isPartnerTyping, isKeyboardOpen]);
 
   const handleTyping = (e) => {
     setInputValue(e.target.value);
 
-    // Emit typing event
     if (socketRef.current) {
       socketRef.current.emit('typing', roomId);
     }
@@ -592,7 +536,6 @@ const Chat = () => {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // 2.5 second delay before emitting stop_typing ("fake typing effect")
     typingTimeoutRef.current = setTimeout(() => {
       if (socketRef.current) {
         socketRef.current.emit('stop_typing', roomId);
@@ -604,19 +547,25 @@ const Chat = () => {
   const sendMessage = async (overrideContent = null, overrideType = 'text', overrideFileUrl = null) => {
     if (isSendingRef.current && !overrideContent && !overrideFileUrl) return;
 
-    // Check if called as event handler (first arg would be an event object)
     const contentParam = (typeof overrideContent === 'string') ? overrideContent : null;
     const contentToSend = (contentParam !== null ? contentParam : inputValue).trim();
     if (!contentToSend && !overrideFileUrl) return;
 
     if (overrideType === 'text') {
       setInputValue('');
-      // Keep keyboard open by refocusing input immediately (sticky keyboard behavior)
-      setTimeout(() => {
+
+      requestAnimationFrame(() => {
         if (inputRef.current) {
-          inputRef.current.focus();
+          inputRef.current.focus({ preventScroll: true });
         }
-      }, 0);
+
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }
+        }, 50);
+      });
+
       if (socketRef.current) {
         socketRef.current.emit('stop_typing', roomId);
       }
@@ -634,6 +583,7 @@ const Chat = () => {
     } : null;
 
     const now = new Date();
+    const tempId = 'temp-' + Date.now() + '-' + Math.random();
     const messageData = {
       sender: myUsername,
       text: overrideType === 'text' ? contentToSend : '',
@@ -644,15 +594,14 @@ const Chat = () => {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      createdAt: now.toISOString(), // Raw timestamp for comparisons
+      createdAt: now.toISOString(),
       seen: false,
       isOwn: true,
-      _id: 'temp-' + Date.now(),
+      _id: tempId,
       replyTo: replyPayload,
       deletedForEveryone: false
     };
 
-    // Store message for potential retry
     failedMessageRef.current = {
       roomId,
       message: contentToSend,
@@ -665,21 +614,6 @@ const Chat = () => {
     setMessages((prev) => [...prev, messageData]);
     setShowEmojiPicker(false);
     setReplyingTo(null);
-
-    // REMOVED: Socket forwarding is no longer used
-    // The HTTP POST endpoint handles all message broadcasting
-    /*
-    socketRef.current?.emit('send_message', {
-      roomId,
-      text: contentToSend,
-      messageType: overrideType,
-      fileUrl: overrideFileUrl,
-      replyTo: replyPayload,
-      sender: myUsername,
-      timestamp: messageData.timestamp,
-      clientTempId: messageData._id
-    });
-    */
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/messages`, {
@@ -696,6 +630,7 @@ const Chat = () => {
           replyTo: replyPayload
         })
       });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Server error: ${response.status}`);
@@ -703,20 +638,22 @@ const Chat = () => {
 
       const saved = await response.json().catch(() => null);
       const savedId = saved?._id || saved?.message?._id || saved?.data?._id || null;
+
       if (savedId) {
+        // Mark this ID as processed to prevent duplicates
+        processedMessageIds.current.add(savedId);
+
         setMessages(prev =>
-          prev.map(m => (m._id === messageData._id ? { ...m, _id: savedId } : m))
+          prev.map(m => (m._id === tempId ? { ...m, _id: savedId } : m))
         );
       }
 
-      // Success - clear failed message reference and reply context
       failedMessageRef.current = null;
       setReplyingTo(null);
 
     } catch (error) {
       console.error('Send message error:', error);
 
-      // Show error and allow retry
       showError(
         'Failed to Send',
         getErrorMessage(error, 'Your message could not be sent. Please try again.'),
@@ -744,7 +681,6 @@ const Chat = () => {
                 throw new Error('Retry failed');
               }
 
-              // Success - remove error and failed message reference
               setError(null);
               failedMessageRef.current = null;
             } catch (retryError) {
@@ -778,13 +714,16 @@ const Chat = () => {
         body: formData
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Upload failed');
+      }
 
       const data = await response.json();
       sendMessage('', type, data.fileUrl);
     } catch (error) {
       console.error('Upload error:', error);
-      showError('Upload Failed', 'Could not upload media. Please try again.');
+      showError('Upload Failed', error.message || 'Could not upload media. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -799,7 +738,6 @@ const Chat = () => {
     if (file) handleFileUpload(file, 'image');
   };
 
-  // --- CAMERA LOGIC ---
   const openCamera = async () => {
     try {
       setIsCameraOpen(true);
@@ -833,14 +771,11 @@ const Chat = () => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    // Set canvas dimensions to match video stream
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert to blob and send
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -853,22 +788,54 @@ const Chat = () => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+
+      // Determine supported MIME type for mobile compatibility (iOS prefers mp4/aac)
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      }
+
+      console.log('[Audio] Starting recording with MIME:', mimeType);
+
+      const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
       };
 
       recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const file = new File([audioBlob], "recording.webm", { type: 'audio/webm' });
-        handleFileUpload(file, 'audio');
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('[Audio] Recording stopped. Blob size:', audioBlob.size, 'Type:', audioBlob.type);
+
+        // Ensure we have data before uploading
+        if (audioBlob.size > 0) {
+          // Use correct extension based on MIME type
+          const isMp4 = mimeType.includes('mp4');
+          const ext = isMp4 ? 'm4a' : 'webm';
+
+          // CRITICAL FIX: Backend strict regex (/m4a|webm/...) might reject 'audio/mp4'
+          // We "lie" and say it's 'audio/x-m4a' which matches 'm4a' in the backend regex
+          // The content is still valid AAC/MP4 audio
+          const uploadMimeType = isMp4 ? 'audio/x-m4a' : mimeType;
+
+          const file = new File([audioBlob], `recording.${ext}`, { type: uploadMimeType });
+          handleFileUpload(file, 'audio');
+        } else {
+          console.error('[Audio] No audio data recorded');
+          showError('Recording Error', 'No audio was recorded. Please try again.');
+        }
+
         stream.getTracks().forEach(track => track.stop());
       };
 
-      recorder.start();
+      // Request data every 1 second to ensure we don't lose everything if it crashes
+      recorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
       recordingIntervalRef.current = setInterval(() => {
@@ -876,7 +843,7 @@ const Chat = () => {
       }, 1000);
     } catch (err) {
       console.error('Recording error:', err);
-      showError('Microphone Error', 'Could not access microphone.');
+      showError('Microphone Error', 'Could not access microphone. Please check permissions.');
     }
   };
 
@@ -902,10 +869,9 @@ const Chat = () => {
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (messageId.startsWith('temp-')) return; // Can't delete unsynced messages yet
+    if (messageId.startsWith('temp-')) return;
 
     try {
-      // Optimistic UI update for both sides
       setMessages(prev => prev.map(msg =>
         msg._id === messageId
           ? { ...msg, isDeleted: true, deletedForEveryone: true, message: 'Message unsent', text: 'Message unsent', fileUrl: null }
@@ -923,7 +889,6 @@ const Chat = () => {
       setContextMenuMsgId(null);
     } catch (error) {
       console.error('Delete error:', error);
-      // Suppress user-facing error toast for unsend
     }
   };
 
@@ -932,7 +897,6 @@ const Chat = () => {
 
   const getSwipeDirection = (msg) => (msg.isOwn ? -1 : 1);
 
-  // Clamp translateX based on sender/receiver direction
   const getSwipeTranslate = (msgId) => {
     if (!activeSwipe || activeSwipe.messageId !== msgId) return 0;
     const msg = swipeMessageRef.current;
@@ -997,24 +961,21 @@ const Chat = () => {
   const handleNext = async () => {
     if (isSkipping) return;
 
-    isManualLeave.current = true; // Block the unmount cleanup leave call
+    isManualLeave.current = true;
     setIsSkipping(true);
     setPartnerStatus('left');
     setIsPartnerTyping(false);
 
-    // Kill the updates interval immediately to stop all polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
 
-    // Clear typing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
     }
 
-    // Notify backend and clear locale immediately
     try {
       fetch(`${BACKEND_URL}/api/chat/leave`, {
         method: 'POST',
@@ -1025,7 +986,6 @@ const Chat = () => {
     sessionStorage.removeItem('chat_messages');
     sessionStorage.removeItem('chat_room');
 
-    // Smooth delay for modal visibility
     setTimeout(() => {
       navigate('/match', { replace: true });
     }, 1500);
@@ -1033,7 +993,12 @@ const Chat = () => {
 
   const resolveFileUrl = (url) => {
     if (!url) return '';
-    return url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+    if (url.startsWith('http')) return url;
+
+    // Ensure accurate joining with backend URL
+    const baseUrl = BACKEND_URL.replace(/\/$/, '');
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${path}`;
   };
 
   const TextMessage = ({ text, isDeleted }) => (
@@ -1053,11 +1018,8 @@ const Chat = () => {
   );
 
   const AudioMessage = ({ src }) => (
-    <div className="message-media audio">
-      <audio className="message-audio" controls src={src} />
-    </div>
+    <AudioWaveform src={src} />
   );
-
 
   return (
     <div className="chat-page">
@@ -1080,7 +1042,6 @@ const Chat = () => {
           </div>
         )}
 
-        {/* HEADER */}
         <div className="chat-header">
           <div className="header-left">
             <div className="partner-avatar">
@@ -1102,7 +1063,6 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* MESSAGES */}
         <div className={`chat-body chat-wallpaper-dark ${isKeyboardOpen ? 'keyboard-open' : ''}`} ref={chatBodyRef}>
           <div className="chat-thread">
             {messages.map((msg, idx) => {
@@ -1200,10 +1160,10 @@ const Chat = () => {
             </div>
           )}
 
-          <div ref={messagesEndRef} className="messages-end-anchor" />
+          <div style={{ height: '80px', width: '100%', flexShrink: 0 }} />
+          <div ref={messagesEndRef} className="messages-end-anchor" style={{ height: '1px', width: '100%' }} />
         </div>
 
-        {/* INPUT */}
         <div
           className={`chat-input-container ${showEmojiPicker ? 'emoji-open' : ''} ${isRecording ? 'is-recording' : ''} ${replyingTo ? 'has-reply' : ''}`}
           style={{
@@ -1351,7 +1311,6 @@ const Chat = () => {
           </div>
         )}
 
-        {/* Camera Overlay */}
         {isCameraOpen && (
           <div className="camera-overlay">
             <div className="camera-header">
@@ -1371,7 +1330,6 @@ const Chat = () => {
           </div>
         )}
 
-        {/* Error Notification */}
         {error && (
           <div className={`error-notification ${error.type}`}>
             <AlertCircle size={20} style={{ flexShrink: 0 }} />
