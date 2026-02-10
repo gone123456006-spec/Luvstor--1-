@@ -6,7 +6,7 @@ import { countries } from '../utils/countries';
 
 const Auth = () => {
     const navigate = useNavigate();
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -25,19 +25,6 @@ const Auth = () => {
 
     const handleGenderSelect = (gender) => {
         setFormData(prev => ({ ...prev, gender }));
-    };
-
-    const toggleMode = () => {
-        setIsLogin(!isLogin);
-        setError('');
-        setFormData({
-            username: '',
-            email: '',
-            password: '',
-            country: '',
-            gender: '',
-            interests: []
-        });
     };
 
     const handleSubmit = async (e) => {
@@ -176,14 +163,6 @@ const Auth = () => {
                     </button>
                 </form>
 
-                <div className="auth-footer">
-                    <p>
-                        {isLogin ? "Don't have an account? " : "Already have an account? "}
-                        <button onClick={toggleMode} className="link-btn">
-                            {isLogin ? 'Sign Up' : 'Login'}
-                        </button>
-                    </p>
-                </div>
             </div>
 
             <style>{`
