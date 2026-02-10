@@ -35,21 +35,9 @@ const handleResponse = async (response) => {
 
         // Redirect based on user type and error code
         if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'NO_TOKEN') {
-            // If token expired, invalid, or missing, redirect to appropriate login page
-            if (isAnonymous) {
-                // Anonymous users go to gender page (anonymous login)
-                window.location.href = '/gender';
-            } else {
-                // Regular users go to auth page
-                window.location.href = '/auth';
-            }
+            window.location.href = '/gender';
         } else {
-            // Other 401 errors (user not found) - check if was anonymous
-            if (isAnonymous) {
-                window.location.href = '/gender';
-            } else {
-                window.location.href = '/auth';
-            }
+            window.location.href = '/gender';
         }
         
         throw new Error(errorMessage);

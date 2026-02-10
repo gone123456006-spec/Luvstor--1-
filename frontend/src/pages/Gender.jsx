@@ -132,12 +132,6 @@ const Gender = () => {
 
   return (
     <div className="gender-container">
-      {!isLoggedIn && (
-        <button className="auth-btn" onClick={() => navigate('/auth')}>
-          Login / Signup
-        </button>
-      )}
-
       <div className="gender-content-wrapper">
         <img src={logo} alt="Luvstor" className="gender-logo" />
 
@@ -208,24 +202,6 @@ const Gender = () => {
         </button>
 
         <style>{`
-        .auth-btn {
-          position: absolute;
-          top: 20px;
-          right: 20px;
-          background: transparent;
-          border: 1px solid rgba(255,255,255,0.3);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          cursor: pointer;
-          transition: all 0.3s;
-          font-size: 0.9rem;
-        }
-        .auth-btn:hover {
-          background: rgba(255,255,255,0.1);
-          border-color: var(--accent-yellow, #ffd369);
-          color: var(--accent-yellow, #ffd369);
-        }
         .gender-logo {
           width: 150px;
           height: auto;

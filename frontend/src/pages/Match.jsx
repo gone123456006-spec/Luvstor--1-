@@ -61,16 +61,9 @@ const Match = () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
-            // Redirect based on user type
-            if (isAnonymous || errorCode === 'TOKEN_EXPIRED') {
-              setTimeout(() => {
-                navigate('/gender');
-              }, 1500);
-            } else {
-              setTimeout(() => {
-                navigate('/auth');
-              }, 1500);
-            }
+            setTimeout(() => {
+              navigate('/gender');
+            }, 1500);
           }
           
           throw new Error(errorMessage);
@@ -122,12 +115,7 @@ const Match = () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
-            // Redirect based on user type
-            if (isAnonymous) {
-              navigate('/gender');
-            } else {
-              navigate('/auth');
-            }
+            navigate('/gender');
           }
           return; // Keep trying for other errors
         }

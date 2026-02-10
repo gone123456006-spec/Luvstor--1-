@@ -12,17 +12,8 @@ const ProtectedRoute = () => {
                 const token = localStorage.getItem('token');
                 
                 if (!token) {
-                    // Check if user was anonymous - redirect to gender page instead of auth
-                    const userStr = localStorage.getItem('user');
-                    const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
-                    
                     setIsAuthenticated(false);
                     setIsLoading(false);
-                    
-                    // Redirect anonymous users to gender page, others to auth
-                    if (isAnonymous) {
-                        window.location.href = '/gender';
-                    }
                     return;
                 }
 
@@ -39,19 +30,10 @@ const ProtectedRoute = () => {
                 } else {
                     // Token is invalid or expired
                     if (response.status === 401) {
-                        // Get user info to determine redirect
-                        const userStr = localStorage.getItem('user');
-                        const isAnonymous = userStr ? (JSON.parse(userStr).isAnonymous || false) : false;
-                        
                         localStorage.removeItem('token');
                         localStorage.removeItem('user');
                         
-                        // Redirect based on user type
-                        if (isAnonymous) {
-                            window.location.href = '/gender';
-                        } else {
-                            window.location.href = '/auth';
-                        }
+                        window.location.href = '/gender';
                     }
                     setIsAuthenticated(false);
                 }
@@ -76,8 +58,7 @@ const ProtectedRoute = () => {
     }
 
     if (!isAuthenticated) {
-        // Redirect to login, saving the location they tried to access
-        return <Navigate to="/auth" state={{ from: location }} replace />;
+        return <Navigate to="/gender" state={{ from: location }} replace />;
     }
 
     return <Outlet />;
