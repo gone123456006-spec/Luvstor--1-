@@ -1,14 +1,23 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { storage } from './storage';
 
-// Backend URL - matches the frontend configuration
-import { BACKEND_URL } from '@env';
+// Backend URL from .env (for native) or same host when on web so backend is reachable
+import { BACKEND_URL as ENV_BACKEND_URL } from '@env';
 
+const getBaseURL = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
+        return `http://${window.location.hostname}:5001`;
+    }
+    const fromEnv = typeof ENV_BACKEND_URL !== 'undefined' && ENV_BACKEND_URL ? ENV_BACKEND_URL : 'http://localhost:5001';
+    return fromEnv.replace(/\/$/, '');
+};
 
+const baseURL = getBaseURL();
 
 // Create axios instance
 const api = axios.create({
-    baseURL: BACKEND_URL.replace(/\/$/, ''),
+    baseURL,
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
@@ -49,7 +58,7 @@ api.interceptors.response.use(
                 data,
             });
         } else if (error.request) {
-            // Network error
+            // Network error (backend not running, wrong URL, or on device: set BACKEND_URL in .env to your PC IP)
             return Promise.reject({
                 status: 0,
                 message: 'Unable to connect to server. Please check your internet connection.',

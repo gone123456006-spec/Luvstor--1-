@@ -12,6 +12,12 @@ const Chat = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Scope iOS scroll-lock CSS to chat only (do not lock promo/home pages)
+  useEffect(() => {
+    document.body.classList.add('chat-scroll-lock');
+    return () => document.body.classList.remove('chat-scroll-lock');
+  }, []);
+
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);

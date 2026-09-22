@@ -1,0 +1,248 @@
+/* Shared legal / policy pages — professional layout */
+
+html.legal-page-active,
+html.legal-page-active body,
+html.legal-page-active #root {
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: static !important;
+  background: #210141 !important;
+}
+
+.legal-page {
+  --bg: #210141;
+  --bg-2: #360167;
+  --accent: #ffd369;
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.65);
+  --body: rgba(255, 255, 255, 0.88);
+  --line: rgba(255, 255, 255, 0.12);
+  --card: rgba(255, 255, 255, 0.06);
+
+  /* Same background as /promo landing */
+  background: radial-gradient(circle at 50% 0%, #561496 0%, #360167 55%, #210141 100%);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  width: 100%;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+}
+
+.legal-page *,
+.legal-page *::before,
+.legal-page *::after {
+  box-sizing: border-box;
+}
+
+.legal-top {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 22px 28px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.legal-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.legal-brand img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.legal-back {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.legal-back:hover {
+  text-decoration: underline;
+}
+
+.legal-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 36px 28px 72px;
+  text-align: left;
+}
+
+.legal-wrap h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.85rem, 3.8vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-align: left;
+}
+
+.legal-updated {
+  margin: 0 0 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: left;
+}
+
+.legal-wrap > p {
+  margin: 0 0 28px;
+  color: var(--body);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  text-align: left;
+  max-width: 68ch;
+}
+
+.legal-wrap section {
+  margin: 0 0 8px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.legal-wrap section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.legal-wrap h2 {
+  margin: 0 0 12px;
+  font-size: 1.12rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: #fff;
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+
+.legal-wrap section p {
+  margin: 0 0 12px;
+  color: var(--body);
+  font-size: 0.98rem;
+  line-height: 1.72;
+  text-align: left;
+  max-width: 68ch;
+}
+
+.legal-wrap section p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-wrap ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--body);
+  font-size: 0.98rem;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.legal-wrap li {
+  position: relative;
+  margin: 0 0 10px;
+  padding-left: 18px;
+  max-width: 68ch;
+}
+
+.legal-wrap li:last-child {
+  margin-bottom: 0;
+}
+
+.legal-wrap li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.legal-wrap a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.legal-wrap a:hover {
+  text-decoration: underline;
+}
+
+.legal-footer {
+  border-top: 1px solid var(--line);
+  padding: 24px 28px 32px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.legal-footer p {
+  margin: 0 0 12px;
+}
+
+.legal-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+}
+
+.legal-footer-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.legal-footer-links a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .legal-top,
+  .legal-wrap {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .legal-wrap {
+    padding-top: 28px;
+    padding-bottom: 56px;
+  }
+
+  .legal-wrap h1 {
+    font-size: 1.7rem;
+  }
+
+  .legal-wrap > p,
+  .legal-wrap section p,
+  .legal-wrap li {
+    font-size: 0.95rem;
+  }
+}

@@ -4,6 +4,10 @@ import Home from './pages/Home';
 import Gender from './pages/Gender';
 import Match from './pages/Match';
 import Chat from './pages/Chat';
+import PromoLanding from './pages/PromoLanding';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import AccountDeletion from './pages/AccountDeletion';
+import DataSafety from './pages/DataSafety';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
@@ -13,6 +17,14 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gender" element={<Gender />} />
+
+        {/* Independent promotional landing — no auth / no chat flow */}
+        <Route path="/promo" element={<PromoLanding />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/delete-account" element={<AccountDeletion />} />
+        <Route path="/account-deletion" element={<AccountDeletion />} />
+        <Route path="/data-safety" element={<DataSafety />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>

@@ -21,8 +21,8 @@
     }
 }
 
-/* Prevent overscroll on iOS */
-body {
+/* Prevent overscroll on iOS — ONLY while chat page is open (not global) */
+body.chat-scroll-lock {
     position: fixed;
     width: 100%;
     height: 100%;
