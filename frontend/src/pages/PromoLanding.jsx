@@ -251,6 +251,13 @@ const PromoLanding = () => {
                 <span>Short summary of our data practices</span>
               </div>
             </Link>
+            <Link to="/child-safety" className="promo-policy-card">
+              <img src={promoAppIcon} alt="" />
+              <div>
+                <strong>Child Safety</strong>
+                <span>Our child safety standards and reporting process</span>
+              </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -296,6 +303,7 @@ const PromoLanding = () => {
           <Link to="/privacy">Privacy</Link>
           <Link to="/delete-account">Delete account</Link>
           <Link to="/data-safety">Data safety</Link>
+          <Link to="/child-safety">Child safety</Link>
         </div>
       </footer>
     </div>

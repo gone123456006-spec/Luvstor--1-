@@ -84,6 +84,7 @@ const LegalLayout = ({ title, updated, children }) => {
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/delete-account">Account Deletion</Link>
           <Link to="/data-safety">Data Safety</Link>
+          <Link to="/child-safety">Child Safety</Link>
         </div>
       </footer>
     </div>
