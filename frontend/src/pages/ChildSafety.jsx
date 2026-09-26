@@ -57,7 +57,7 @@ const ChildSafety = () => (
         18. Choose <strong>Inappropriate content</strong> for suspected
         exploitative material or behavior, and include relevant details. You may
         also email our child safety contact at{' '}
-        <a href="mailto:support@luvstor.com">support@luvstor.com</a>.
+        <a href="mailto:luvstorapps@gmail.com">luvstorapps@gmail.com</a>.
       </p>
       <p>
         Please do not download, forward, or email suspected CSAM. A report with
@@ -101,7 +101,7 @@ const ChildSafety = () => (
       <p>
         For child-safety concerns or official notices about these standards,
         contact the Luvstor Child Safety Team at{' '}
-        <a href="mailto:support@luvstor.com">support@luvstor.com</a>. Please use
+        <a href="mailto:luvstorapps@gmail.com">luvstorapps@gmail.com</a>. Please use
         the subject line “Child Safety”.
       </p>
     </section>
